@@ -2,6 +2,12 @@
 
 Ngày thực hiện: **22/11/2026 (Asia/Saigon)**. Phạm vi: environment readiness, executable smoke và **một mẫu hát Việt exploratory**. Chưa hoàn thành bộ PoC, chưa nghiệm thu ứng dụng và chưa phê duyệt ADR/stack chính thức.
 
+**Cập nhật sau báo cáo ban đầu:** user đã gửi SRT lời gốc. Đã đo text error trên reference đó; xem [LYRICS_INPUT_WORKFLOW.md](LYRICS_INPUT_WORKFLOW.md). Các đoạn “chưa có ground truth” bên dưới ghi trạng thái lúc chạy smoke ban đầu; chưa có word timing gold hoặc timing reference được kiểm chứng độc lập.
+
+**Cập nhật rendering:** đã hoàn tất ma trận 36 preset; xem
+[RENDER_MATRIX_RESULTS.md](RENDER_MATRIX_RESULTS.md). Các ghi chú “chưa chạy matrix”
+bên dưới là trạng thái lịch sử của smoke ba file, không phải trạng thái hiện tại.
+
 ## 1. Môi trường đã thực thi
 
 | Thành phần | Thực tế |
@@ -67,7 +73,7 @@ Bản để rà soát:
 
 ## 5. Rendering executable smoke
 
-Ba fixture tự tạo: TPL-01 ảnh/caption/audio; TPL-02 hai artwork/Music Card/progress/audio; TPL-03 video test pattern/lyric highlight minh họa/audio. Highlight dựa trên thời gian fixture định trước, **không phải AI alignment**.
+Ba fixture tự tạo: TPL-01 ảnh/caption/audio; TPL-02 một artwork/Music Card/progress/audio; TPL-03 video test pattern/lyric highlight minh họa/audio. TPL-02 chưa thử đầy đủ hai ảnh như template sản phẩm. Highlight dựa trên thời gian fixture định trước, **không phải AI alignment**.
 
 | Fixture | Output | Render wall time | RTF |
 |---|---|---:|---:|

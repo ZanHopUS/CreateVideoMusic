@@ -1,5 +1,11 @@
 # Local Proof of Concept
 
+Forced alignment CPU và loader Việt: [poc/alignment/README.md](alignment/README.md).
+
+Preview lời Việt với audio và timing thật: [render/LYRICS_REVIEW.md](render/LYRICS_REVIEW.md).
+
+Benchmark ASR `small`/`medium` cùng điều kiện: [lyrics/MODEL_COMPARISON.md](lyrics/MODEL_COMPARISON.md).
+
 Chỉ dùng cho thử nghiệm đã duyệt ngày 22/11/2026; không phải application chính thức.
 Cloud inference tắt. Không commit/push khi chưa được yêu cầu.
 
@@ -36,6 +42,29 @@ Chạy lại đối chứng không VAD (không ghi đè bản VAD-on):
 TXT/SRT là draft với ASR segment timing, chưa forced alignment hoặc review.
 Không dùng bản draft làm ground truth để tính WER/CER.
 
+Đánh giá với SRT user cung cấp đã copy thành `.poc/data/user/vi-001.reference.srt`:
+
+```powershell
+./.poc/venv-asr/Scripts/python.exe -X utf8 poc/lyrics/evaluate.py --self-test
+./.poc/venv-asr/Scripts/python.exe -X utf8 poc/lyrics/evaluate.py
+```
+
+Script dùng whitespace-unit edit rate và CER giữ dấu; lưu raw evaluation và bảng
+review theo cue vào `.poc/evidence/poc-01/vi-001-reference-evaluation/`. Cue overlap
+chỉ hỗ trợ review, không là forced alignment hoặc phép đo word timing accuracy.
+
+Mẫu Anh `en-001` có audio 301.418s; chạy cùng baseline trên 300s đầu, giữ nguồn:
+
+```powershell
+./.poc/venv-asr/Scripts/python.exe poc/monitor.py --out .poc/evidence/poc-01/en-001/resources --timeout 960 -- ./.poc/venv-asr/Scripts/python.exe -X utf8 poc/lyrics/transcribe.py --sample en-001 --max-seconds 300
+./.poc/venv-asr/Scripts/python.exe poc/monitor.py --out .poc/evidence/poc-01/en-001-no-vad/resources --timeout 960 -- ./.poc/venv-asr/Scripts/python.exe -X utf8 poc/lyrics/transcribe.py --sample en-001 --run-id en-001-no-vad --no-vad --max-seconds 300
+./.poc/venv-asr/Scripts/python.exe -X utf8 poc/lyrics/evaluate.py --sample en-001 --exclude-cues 1,2,6,9,11,12,107,108,111
+```
+
+`--exclude-cues` chỉ thêm phép đo bổ sung cho các cue non-verbal đã được phân loại;
+điểm so nguyên SRT vẫn giữ. Không dùng danh sách của mẫu Anh cho reference khác.
+Evaluator từ chối chấm nếu reference nằm ngoài phần audio đã xử lý.
+
 ## Dữ liệu từ TikTok/YouTube
 
 Nguồn dự kiến là file do người dùng cung cấp có quyền dùng: bản gốc của chính mình,
@@ -66,4 +95,5 @@ npm.cmd ci --prefix poc/render
 ```
 
 `render.mjs` mặc định chạy ba fixture 720p30; `--matrix` mở rộng 36 trường hợp theo
-plan, chưa chạy trong vòng smoke đầu. Giữ RAM safety monitor khi mở rộng benchmark.
+plan, lưu riêng để giữ smoke ban đầu. Lệnh chạy, resume và giới hạn phép đo:
+[render/RENDER_MATRIX.md](render/RENDER_MATRIX.md). Giữ RAM safety monitor khi chạy.

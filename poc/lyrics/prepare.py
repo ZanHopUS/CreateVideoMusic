@@ -38,6 +38,7 @@ def sha256(path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--download-model", action="store_true")
+    parser.add_argument("--model", choices=["small", "medium"], default="small")
     args = parser.parse_args()
     import imageio_ffmpeg
     import psutil
@@ -60,7 +61,8 @@ def main():
         "gpu_requirement": "none; browser rendering not tested",
         "cloud_inference": False,
     }
-    save(LOCAL / "evidence" / "poc-00" / "environment.json", environment)
+    environment_name = "environment.json" if args.model == "small" else f"environment-{args.model}.json"
+    save(LOCAL / "evidence" / "poc-00" / environment_name, environment)
     print(json.dumps({key: environment[key] for key in (
         "platform", "cpu", "ram_total_bytes", "ram_available_bytes", "python")}, indent=2))
     print(version.stdout.splitlines()[0])
@@ -70,10 +72,10 @@ def main():
         raise RuntimeError("Insufficient available RAM/disk for model preparation")
     from huggingface_hub import HfApi, snapshot_download
 
-    repo = "Systran/faster-whisper-small"
+    repo = f"Systran/faster-whisper-{args.model}"
     info = HfApi(token=False).model_info(repo)
     revision = info.sha
-    destination = LOCAL / "models" / "faster-whisper-small"
+    destination = LOCAL / "models" / f"faster-whisper-{args.model}"
     snapshot_download(repo_id=repo, revision=revision, token=False,
                       local_dir=destination, max_workers=2,
                       allow_patterns=["model.bin", "config.json", "tokenizer.json",
@@ -81,7 +83,8 @@ def main():
     inventory = [{"path": str(path.relative_to(destination)), "bytes": path.stat().st_size,
                   "sha256": sha256(path)} for path in destination.rglob("*")
                  if path.is_file() and ".cache" not in path.relative_to(destination).parts]
-    save(LOCAL / "evidence" / "poc-00" / "model-inventory.json",
+    inventory_name = "model-inventory.json" if args.model == "small" else f"model-inventory-{args.model}.json"
+    save(LOCAL / "evidence" / "poc-00" / inventory_name,
          {"repo": repo, "revision": revision, "files": inventory,
           "license_source": f"https://huggingface.co/{repo}/blob/{revision}/README.md"})
     print(json.dumps({"repo": repo, "revision": revision, "files": len(inventory)}))

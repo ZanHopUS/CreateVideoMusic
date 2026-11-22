@@ -1,0 +1,9 @@
+# Install these CPU builds from https://download.pytorch.org/whl/cpu first.
+torch==2.8.0+cpu
+torchaudio==2.8.0+cpu
+torchvision==0.23.0+cpu
+# Install remaining packages from PyPI in the same isolated environment.
+whisperx==3.8.6
+transformers==4.57.3
+psutil==7.2.2
+av==16.0.1

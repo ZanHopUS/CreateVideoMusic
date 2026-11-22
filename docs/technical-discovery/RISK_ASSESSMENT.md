@@ -6,6 +6,14 @@ Ngày: **22/11/2026 (Asia/Saigon)**. Trạng thái: **đánh giá trước PoC**
 
 ## 1. Cách đánh giá
 
+**Cập nhật sau các lượt PoC:** bảng dưới là baseline rủi ro trước thử nghiệm;
+trạng thái hiện tại xem [POC_STATUS.md](POC_STATUS.md). Medium giảm lỗi trên một
+bài Việt nhưng chưa có held-out/correction time; loader alignment Việt đã sửa
+nhưng coverage chưa chứng minh timing đúng. [Matrix render](RENDER_MATRIX_RESULTS.md)
+đạt video/decode/markers 36/36, còn đuôi audio/container 19ms khiến 60FPS vượt
+ngưỡng container ≤1 frame; stress 300s và interactive fidelity chưa chạy.
+R-01/02/08/09/10/19 tiếp tục mở; chưa đóng rủi ro bằng smoke hẹp.
+
 Likelihood (L): 1 thấp, 2 vừa, 3 cao. Impact (I): 1 cục bộ, 2 ảnh hưởng workflow, 3 mất dữ liệu/privacy/budget hoặc chặn yêu cầu Core. Score = L×I: 1–2 thấp, 3–4 vừa, 6–9 cao. Đây là ước lượng định tính để ưu tiên, không phải xác suất đã đo. Cột “đóng” là điều kiện cần; mọi hàng hiện **Open** và residual risk sẽ đánh giá lại sau evidence.
 
 ## 2. Sổ rủi ro
