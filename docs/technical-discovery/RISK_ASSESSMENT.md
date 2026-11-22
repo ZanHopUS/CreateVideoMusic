@@ -14,6 +14,18 @@ nhưng coverage chưa chứng minh timing đúng. [Matrix render](RENDER_MATRIX_
 ngưỡng container ≤1 frame; stress 300s và interactive fidelity chưa chạy.
 R-01/02/08/09/10/19 tiếp tục mở; chưa đóng rủi ro bằng smoke hẹp.
 
+**Follow-up sau checkpoint:** [Audio duration](AUDIO_DURATION_RESULTS.md) đạt
+36/36 trên bản sao encode lại AAC; [stress đầu tiên](RENDER_STRESS_RESULTS.md)
+đạt video 300s/1080p60 dọc, RTF 3.477 và các marker/tail checks. Audio workaround
+chưa listening review; stress còn 4 outputs và UI/fidelity/lifecycle chưa thử.
+Rủi ro còn mở, không coi một lượt harness là release acceptance.
+
+**Cập nhật 23/11/2026:** [đủ năm stress outputs](RENDER_STRESS_SUITE_RESULTS.md)
+đã qua validation: 90.000 frames, 0 lỗi timestamp, final duration 300s và tail checks
+đạt; render RTF 2.378–3.477, sampled RAM trong gates. Phần render/resource screening
+có thêm bằng chứng; R-08/09/10 vẫn mở cho concurrency/UI, fidelity, media rộng hơn
+và repetitions. Không đóng toàn bộ POC-04 từ các generated fixtures.
+
 Likelihood (L): 1 thấp, 2 vừa, 3 cao. Impact (I): 1 cục bộ, 2 ảnh hưởng workflow, 3 mất dữ liệu/privacy/budget hoặc chặn yêu cầu Core. Score = L×I: 1–2 thấp, 3–4 vừa, 6–9 cao. Đây là ước lượng định tính để ưu tiên, không phải xác suất đã đo. Cột “đóng” là điều kiện cần; mọi hàng hiện **Open** và residual risk sẽ đánh giá lại sau evidence.
 
 ## 2. Sổ rủi ro

@@ -3,6 +3,10 @@
 Ngày: **22/11/2026 (Asia/Saigon)**. POC-03 trên Windows 11, i7-13620H, RAM 16 GB.
 Chỉ là harness local; chưa triển khai editor hoặc chốt kiến trúc sản phẩm.
 
+**Follow-up:** [AUDIO_DURATION_RESULTS.md](AUDIO_DURATION_RESULTS.md) ghi phép thử
+trên 36 bản sao mới đạt duration container sau encode lại AAC. Kết quả bên dưới
+giữ nguyên để phản ánh đúng matrix gốc; chưa chọn finalizer làm mặc định sản phẩm.
+
 ## 1. Kết luận
 
 **36/36 MP4 đạt kiểm tra preset video, decode và marker AV tổng hợp**. Tổng cộng

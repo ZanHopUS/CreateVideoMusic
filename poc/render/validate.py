@@ -9,10 +9,15 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser()
 parser.add_argument('--matrix',action='store_true')
+parser.add_argument('--directory',type=Path)
+parser.add_argument('--strict-container-duration',action='store_true')
 args = parser.parse_args()
 directory = ROOT / ".poc" / "evidence" / "poc-03"
 if args.matrix:
     directory = directory / 'preset-matrix'
+if args.directory:
+    directory = args.directory.resolve()
+    assert directory.is_relative_to(ROOT / '.poc'), 'Evidence must stay inside .poc'
 settings = json.loads((directory / "render-results.json").read_text(encoding="utf-8"))
 if args.matrix:
     assert len(settings)==36 and len({row['name'] for row in settings})==36
@@ -95,3 +100,5 @@ for case in settings:
 (directory / "validation.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
 if not all(row["metadata_pass"] and row["synthetic_marker_pass"] for row in results):
     raise SystemExit(1)
+if args.strict_container_duration and not all(row['container_duration_within_one_frame'] for row in results):
+    raise SystemExit(2)

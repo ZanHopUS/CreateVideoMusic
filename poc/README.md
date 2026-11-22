@@ -6,6 +6,10 @@ Preview lời Việt với audio và timing thật: [render/LYRICS_REVIEW.md](re
 
 Benchmark ASR `small`/`medium` cùng điều kiện: [lyrics/MODEL_COMPARISON.md](lyrics/MODEL_COMPARISON.md).
 
+Audio duration và stress 300s: [render/STRESS_RENDER.md](render/STRESS_RENDER.md).
+
+Kết quả đủ năm stress outputs: [RENDER_STRESS_SUITE_RESULTS.md](../docs/technical-discovery/RENDER_STRESS_SUITE_RESULTS.md).
+
 Chỉ dùng cho thử nghiệm đã duyệt ngày 22/11/2026; không phải application chính thức.
 Cloud inference tắt. Không commit/push khi chưa được yêu cầu.
 
