@@ -6,6 +6,14 @@ Ngày: **22/11/2026 (Asia/Saigon)**. Trạng thái: **đánh giá trước PoC**
 
 ## 1. Cách đánh giá
 
+**Follow-up fidelity/lifecycle 23/11:** đã xác nhận source-offset adapter sai và
+sửa trong harness. Direct VFR có 3/27 mốc lệch hình dù currentTime gần đúng;
+proxy CFR đơn thuần chưa đủ. Seek-nudge 10µs đạt một lượt TPL03 riêng, còn là
+candidate. Cancel API nhanh nhưng worker linger ~30s; supervised owned-tree
+cleanup ~2s đã đo đạt, không phải thư viện tự cleanup. R-09/11/20 còn mở cho
+media rộng hơn, finalize/crash, editor state và production integration. Xem
+[fidelity](PREVIEW_RENDER_FIDELITY_RESULTS.md), [lifecycle](JOB_LIFECYCLE_RESULTS.md).
+
 **Cập nhật sau các lượt PoC:** bảng dưới là baseline rủi ro trước thử nghiệm;
 trạng thái hiện tại xem [POC_STATUS.md](POC_STATUS.md). Medium giảm lỗi trên một
 bài Việt nhưng chưa có held-out/correction time; loader alignment Việt đã sửa

@@ -11,6 +11,11 @@ checks identical video packet payload hashes, and checks video/audio/container
 duration within 1ms. This is a candidate workaround, not a production default;
 audio undergoes another lossy encode and needs listening review.
 
+Follow-up fidelity testing added `apad=whole_dur` before trim to handle an observed
+11ms short audio EOF at 1.25× speed. A separate regression verifies the original
+300s tail signal. Padding fills missing duration with silence; it cannot restore
+missing source content. See [fidelity results](../../docs/technical-discovery/PREVIEW_RENDER_FIDELITY_RESULTS.md).
+
 ```powershell
 ./.poc/venv-asr/Scripts/python.exe poc/monitor.py --out .poc/evidence/poc-03/bounded-audio-matrix/resources --timeout 300 -- ./.poc/venv-asr/Scripts/python.exe poc/render/bound_matrix_audio.py
 ./.poc/venv-asr/Scripts/python.exe poc/render/validate.py --matrix --directory .poc/evidence/poc-03/bounded-audio-matrix --strict-container-duration

@@ -10,6 +10,8 @@ Audio duration và stress 300s: [render/STRESS_RENDER.md](render/STRESS_RENDER.m
 
 Kết quả đủ năm stress outputs: [RENDER_STRESS_SUITE_RESULTS.md](../docs/technical-discovery/RENDER_STRESS_SUITE_RESULTS.md).
 
+Player fidelity và cancel/retry/snapshot: [render/fidelity/README.md](render/fidelity/README.md).
+
 Chỉ dùng cho thử nghiệm đã duyệt ngày 22/11/2026; không phải application chính thức.
 Cloud inference tắt. Không commit/push khi chưa được yêu cầu.
 
