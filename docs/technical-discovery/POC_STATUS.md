@@ -16,7 +16,10 @@ Ghi nhận này cập nhật các ghi chú “chưa cho phép chạy PoC” tron
 - POC-02: Initial full runs completed — Việt author loader 59/68 cue word draft, 9 fallback, coverage sàng lọc 98.02%; Anh 17/102 word draft, 85 fallback, coverage 60.78%. Đã sửa loader Việt bỏ qua feature_transform và giữ baseline đối chứng. Chưa có word-boundary gold hoặc timing review độc lập; không đánh quality gates Verified.
 - POC-03: Initial smoke và 36-case preset matrix completed. Matrix 36/36 đạt video metadata/decode/markers, 24.300 frames không lỗi timestamp, peak private 1.143 GiB/min available 4.793 GiB. Video 15.000s nhưng AAC/container 15.019s: 18 bản 60FPS vượt ngưỡng container ≤1 frame; R1 đầy đủ còn mở. Xem [RENDER_MATRIX_RESULTS.md](RENDER_MATRIX_RESULTS.md). Interactive preview fidelity và fixtures trim/rate/VFR/transition chưa chạy.
 - Preview Việt 33.9s dùng audio/lyrics/timing thật (6 word cues + 1 sentence fallback): đã kiểm 1.017 frames, metadata, visual state và audio crop correlation; user xác nhận **“đạt” ngày 22/11/2026** cho đúng preview này. File giữ nguyên hash sau matrix; chưa có word timing annotation độc lập.
-- POC-04/05/07: Pending — chưa chạy stress/editor/storage/Drive/segment suggestions.
+- POC-03 duration follow-up: 36 bản sao bounded-audio đạt cả duration container ≤1 frame; copy video payload giữ nguyên, AAC encode lại. Chưa listening review hoặc chốt production pipeline. Xem [AUDIO_DURATION_RESULTS.md](AUDIO_DURATION_RESULTS.md).
+- POC-04 render screening completed, cập nhật 23/11/2026 — đã đủ 5/5 output 300s/1080p60 (TPL01/02 dọc, TPL03 dọc/ngang/vuông). 90.000 frames, 0 timestamp errors; final duration 300.000s, AV markers và tail checks đạt ở mọi file. Render RTF 2.378–3.477; peak private toàn bộ các lượt 2.111 GiB/min available 3.844 GiB. Mới đạt render-time/resource subgates trong scope fixture, chưa đo UI/fidelity/lifecycle/listening hoặc repetitions. Xem [RENDER_STRESS_SUITE_RESULTS.md](RENDER_STRESS_SUITE_RESULTS.md).
+- Bốn mẫu mới đã chạy tuần tự và qua validation trong 56 phút 42 giây; source snapshots và 10 raw/bounded output hashes đã xác minh. Có năm bản xem 20s/540px/30FPS tạo sau benchmark; không thay bản 300s/1080p60.
+- POC-05/07: Pending — chưa chạy storage/Drive/segment suggestions; editor/lifecycle stress còn thiếu.
 - POC-06: Excluded — local only.
 
 Artifacts tải về, môi trường, media và raw evidence đặt dưới `.poc/`, được ignore khỏi Git. Script PoC có thể nằm trong `poc/`; không phải application code chính thức.
@@ -29,4 +32,4 @@ Kết quả alignment, loader compatibility fix và file word/sentence drafts: [
 
 Video để nghe rà soát: [VIETNAMESE_LYRICS_PREVIEW.md](VIETNAMESE_LYRICS_PREVIEW.md). Theo steering của user, hiện ưu tiên tiếng Việt; tối ưu mẫu Anh tạm hoãn.
 
-Đã có commit baseline discovery/PoC `df5efd3` trên `dev`, chưa push. Các thay đổi reference evaluation, alignment, preview, benchmark medium và render matrix mới chưa commit/push; chưa chọn stack chính thức hoặc đánh FR Verified.
+Checkpoint `c3affcc` đã push lên `origin/dev`, gồm baseline `df5efd3` và reference evaluation/alignment/preview/medium/matrix. Ngày 23/11/2026, user đã phê duyệt commit/push harness và báo cáo audio duration/stress sau checkpoint. Các câu “chưa commit/push” trong báo cáo ghi trạng thái lúc lập; trạng thái repository hiện tại theo Git history. Chưa chọn stack chính thức hoặc đánh FR Verified.
