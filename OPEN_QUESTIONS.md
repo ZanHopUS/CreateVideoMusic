@@ -1,8 +1,12 @@
 # Open Questions & Architecture Decision Backlog — 22/11/2026
 
-Trạng thái: **Chưa xác nhận**. Các đề xuất mặc định bên dưới KHÔNG được xem là quyết định đã chốt.
+Trạng thái: **Đã được Product Owner xác nhận theo các phương án đề xuất**, ngày **22/11/2026 (Asia/Saigon)**, qua yêu cầu: “xác nhận tài liệu open_questions như đề xuất”.
 
-| ID | Câu hỏi cần quyết định | Phương án và khuyến nghị tạm | Gate | Mức rủi ro |
+Phạm vi xác nhận là **định hướng và các điều kiện của cả 18 phương án bên dưới**. Những phương án yêu cầu benchmark, kiểm tra quota/privacy hoặc phê duyệt ngưỡng sau đo vẫn giữ nguyên các điều kiện đó; không coi chất lượng, khả năng tương thích hoặc số liệu chưa đo là đã được kiểm chứng.
+
+Xác nhận này không phải lệnh bắt đầu PoC, cài dependency, tải model, gửi dữ liệu lên cloud, commit hoặc push. Các quyết định A–G giữ nguyên. Những chi tiết mới trong Technical Discovery như checkpoint cụ thể, license aligner Việt, corpus, ngưỡng Go/No-Go và Remotion vẫn cần phê duyệt tương ứng trước thử nghiệm.
+
+| ID | Câu hỏi kỹ thuật | Phương án đã xác nhận; giữ nguyên điều kiện kiểm chứng | Gate | Mức rủi ro |
 |---|---|---|---|---|
 | AI-01 | Gemini Free Tier có đủ quota/tính năng và điều khoản dữ liệu cho caption/style? | Thử Gemini **chỉ khi** quota miễn phí và privacy chấp nhận được; local rules fallback. Không chọn model cứng trước khi thử. | PoC | Cao |
 | AI-02 | OpenAI API có được dùng khi ngân sách free? | Không làm dependency bắt buộc; billing API riêng ChatGPT, chỉ bật khi người dùng tự thay đổi ngân sách. | Requirements | Cao |
@@ -23,12 +27,25 @@ Trạng thái: **Chưa xác nhận**. Các đề xuất mặc định bên dư�
 | ARC-01 | Vercel sau MVP dùng Local Agent hay cloud renderer? | Hoãn đến khi Core local ổn định; nếu Local Agent cần auth/CORS/private-network security. | Later | Cao |
 | ACC-01 | Threshold latency, RAM, lyrics WER/timing, render quality ra sao? | Baseline bằng benchmark trên máy đích, rồi phê duyệt định lượng. | PoC | Cao |
 
-## Các quyết định cần người dùng xác nhận trước triển khai kỹ thuật
-1. Có chấp nhận AI caption/style từ Gemini Free Tier khi phải gửi nội dung lên Google không? Default: tắt.
-2. Có dùng bất kỳ OpenAI API nào khi không có ngân sách trả phí? Default: không.
-3. Media project có cần portable package khi chuyển PC/Drive không? Đề xuất: có.
-4. Có muốn nhập từ URL ngoài không? Default: không ở Core.
-5. Có nguồn nhạc/ảnh/video bản quyền hoặc stock được cấp phép dự kiến không? Hiện chỉ xác nhận upload cá nhân.
+## Các lựa chọn mặc định đã xác nhận
+
+1. **Gemini caption/style: tắt mặc định.** Chỉ xem xét bật sau khi kiểm tra quota miễn phí, privacy phù hợp và có opt-in rõ theo provider/loại dữ liệu; chưa được phép gửi dữ liệu trong lần xác nhận này.
+2. **OpenAI API: không dùng khi chưa có ngân sách được cho phép.** Không làm dependency bắt buộc; không suy luận ChatGPT subscription là ngân sách API.
+3. **Có portable project package khi chuyển PC/Drive.** Định hướng ST-01: SQLite runtime + snapshot package có schemaVersion, checksums và đường dẫn tương đối. Định dạng package/schema/driver cụ thể còn phải kiểm chứng.
+4. **Không nhập URL ngoài trong Core.** Chỉ xem xét adapter nguồn được cấp phép khi có yêu cầu mới.
+5. **Dùng media upload cá nhân có quyền sử dụng.** Chưa xác nhận nguồn stock cụ thể hoặc quyền với từng file; kiểm tra nguồn/license trước dùng làm dữ liệu PoC. Không triển khai downloader TikTok/YouTube/Spotify.
+
+## Phần còn phải kiểm chứng hoặc cụ thể hóa
+
+- AI-03/04/05: checkpoint, chất lượng hát Việt/Anh, word/sentence timing và lợi ích tách vocal so với tài nguyên.
+- AI-01/06: quota/account, điều khoản dữ liệu và phạm vi consent thực tế trước bật cloud.
+- ST-01–04: schema/package, driver, quyền folder, crash/restore, Drive round-trip, quota/cache/recovery/GC cụ thể.
+- MED-02/03/04: quyền của bộ dữ liệu thực, chất lượng gợi ý đoạn/nhạc, codecs/file caps và concurrency.
+- UX-01/02: test cases chi tiết cho Core và blank builder Complete; 4–5 loại track không là giới hạn tổng số track.
+- ACC-01: đo baseline trước, sau đó trình phê duyệt ngưỡng định lượng; xác nhận này không tự duyệt các con số đề xuất trong `docs/technical-discovery/POC_PLAN.md`.
+- ARC-01 tiếp tục hoãn tới khi Core local ổn định; không chọn kiến trúc Vercel trong lần xác nhận này.
+
+Trạng thái kiểm chứng thực nghiệm: **Not run**. Các tài liệu Technical Discovery vẫn là đề xuất ngoài phần định hướng đã được xác nhận tại đây.
 
 ## Nguồn tham khảo official, cần kiểm tra lại khi triển khai
 - Gemini API pricing/tiers: https://ai.google.dev/gemini-api/docs/pricing
