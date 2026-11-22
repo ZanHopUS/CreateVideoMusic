@@ -1,0 +1,8 @@
+# Local PoC environments, downloaded artifacts, private media and raw evidence
+.poc/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+node_modules/
