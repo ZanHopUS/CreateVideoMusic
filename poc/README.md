@@ -1,5 +1,9 @@
 # Local Proof of Concept
 
+State/Undo/Redo, template reuse và SQLite/manual/recovery/portable local:
+[state-storage/README.md](state-storage/README.md). Có functional evidence; render
+restore R0 RAM chưa đạt, đọc giới hạn trước chạy lại.
+
 Forced alignment CPU và loader Việt: [poc/alignment/README.md](alignment/README.md).
 
 Preview lời Việt với audio và timing thật: [render/LYRICS_REVIEW.md](render/LYRICS_REVIEW.md).

@@ -98,6 +98,14 @@ Tên `AI-01/02/03` cũng xuất hiện như test IDs trong SRS. Bảng này dùn
 
 ## 5. Quy tắc dừng và quyết định phê duyệt
 
+Cập nhật thực nghiệm 23/11/2026: local PoC đã được user cho phép theo
+[POC_STATUS.md](POC_STATUS.md); các yêu cầu approval phía dưới là planning history,
+không hủy quyền local hiện có. [Storage/recovery results](STORAGE_RECOVERY_POC_RESULTS.md)
+bổ sung evidence cho fault/restore/shared assets, chưa đóng rủi ro production hoặc
+power loss. Drive vẫn Not run. Rủi ro tài nguyên còn mở: render restore concurrency
+2 min available 1.850 GiB; concurrency 1 bị dừng ở 1.651 GiB. Không dùng functional
+pass thay cho R0, không tự tăng yêu cầu máy.
+
 Không chạy PoC trước TD-01/02 và các approval liên quan. Khi đã được phép thử: dừng run nếu thiếu quyền dùng dữ liệu, có outbound trái consent, có chi phí không được duyệt, mất dữ liệu hoặc vượt resource safety gate. Dùng bản sao disposable cho fault tests; không tác động manual project thật.
 
 No-Go là kết luận về **candidate/configuration**, không tự giảm yêu cầu sản phẩm. Word alignment fail chỉ mở đường Conditional Go sentence mode khi câu đạt và PO chấp nhận; local ASR fail không biến manual-only thành Core hoàn thành. Rendering fail không cho bỏ một preset E. Storage mất dữ liệu chặn chọn phương án, không coi khả năng “retry được” là đủ.

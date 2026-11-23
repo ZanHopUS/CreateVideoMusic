@@ -22,7 +22,10 @@ Ghi nhận này cập nhật các ghi chú “chưa cho phép chạy PoC” tron
 - POC-03/04 fidelity follow-up 23/11: Remotion Player thật so PNG/MP4 tại 27 mốc mỗi project 12 items. TPL01/02 baseline 27/27 đạt; direct VFR TPL03 fail 3/27 (210/240/300), CFR proxy đơn thuần chưa sửa được. Candidate seek-nudge 10µs, default off, đạt 27/27 TPL03 + export/AV checks trong lượt riêng. Không chốt production policy hoặc đóng R2. Xem [PREVIEW_RENDER_FIDELITY_RESULTS.md](PREVIEW_RENDER_FIDELITY_RESULTS.md).
 - Player harness: 100 seeks/project P95 49.61/49.70/66.41ms; 60s simple playback ≈29.997 frameupdate events/s, chưa phải compositor FPS hoặc UI latency nghiệm thu. Audio EOF 11ms tại 1.25× đã có pad/trim candidate, regression tail 300s đạt.
 - POC-04 lifecycle: API-only cancel ~15ms nhưng worker exit ~30s không đạt. Supervisor candidate dọn owned PID tree ~2.063s, retry/immutable snapshot/publish-last checks đạt; chưa thử cancel finalize/crash/disk-full, undo/reuse hoặc editor thực. Xem [JOB_LIFECYCLE_RESULTS.md](JOB_LIFECYCLE_RESULTS.md).
-- POC-05/07: Pending — chưa chạy storage/Drive/segment suggestions; editor/lifecycle stress còn thiếu.
+- POC-04 state/template follow-up 23/11: 6 fixtures ×50 edits/undo/redo (300 mỗi loại) khớp state; dirty/history/template isolation và 6 valid bindings đạt. Sửa catalog guard chặn 6 wrong-MIME bindings. Model harness chưa là editor UI. Xem [STATE_TEMPLATE_POC_RESULTS.md](STATE_TEMPLATE_POC_RESULTS.md).
+- POC-05 local: 32 functional checks đạt, gồm 24 process-crash runs/12 phases và 10 portable restores; lặp cùng fixtures trong thư mục mới cũng đạt. SQLite FULL thực, file ENOSPC injected, Windows file lock và independent recovery được kiểm. Chưa thử power loss/Drive hoặc chốt schema/driver/container. Xem [STORAGE_RECOVERY_POC_RESULTS.md](STORAGE_RECOVERY_POC_RESULTS.md).
+- Render từ storage restore: 2 MP4/720 frames và 6 cặp PNG đạt chức năng. **R0 chưa đạt**: concurrency 2 min available 1.850 GiB; concurrency 1 bị dừng dưới 2 GiB liên tục 10s (min 1.651 GiB). Storage repeat cũng có sample 1.992 GiB. Chưa kết luận toàn bộ POC-05/Core Go; cần đủ headroom trước thử render nặng tiếp.
+- POC-07: Pending — segment suggestions chưa chạy; editor UI và lifecycle coverage đầy đủ còn mở.
 - POC-06: Excluded — local only.
 
 Artifacts tải về, môi trường, media và raw evidence đặt dưới `.poc/`, được ignore khỏi Git. Script PoC có thể nằm trong `poc/`; không phải application code chính thức.
@@ -35,4 +38,4 @@ Kết quả alignment, loader compatibility fix và file word/sentence drafts: [
 
 Video để nghe rà soát: [VIETNAMESE_LYRICS_PREVIEW.md](VIETNAMESE_LYRICS_PREVIEW.md). Theo steering của user, hiện ưu tiên tiếng Việt; tối ưu mẫu Anh tạm hoãn.
 
-Checkpoint `c06b500` đã push lên `origin/dev`, gồm các checkpoint trước và audio duration/five-case stress suite. Ngày 23/11/2026, user đã phê duyệt commit/push follow-up Player fidelity, audio EOF và lifecycle. Các câu trạng thái Git trong báo cáo cũ ghi thời điểm lập; trạng thái repository hiện tại theo Git history. Chưa chọn stack chính thức hoặc đánh FR Verified.
+Checkpoint `ed0ed8f` đã push lên `origin/dev`, gồm Player fidelity, audio EOF và lifecycle cùng các checkpoint trước. Follow-up state/template/local storage hiện trên `dev`, chưa commit/push. Các câu trạng thái Git trong báo cáo cũ ghi thời điểm lập; trạng thái repository hiện tại theo Git history. Chưa chọn stack chính thức hoặc đánh FR Verified.

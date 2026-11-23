@@ -91,4 +91,17 @@ POC-05 phải kiểm chứng:
 | Drive round-trip | ≥2 package sync-download-restore với hash khớp; thử pause/offline/conflict/quota; chưa đủ account thì Not run |
 | Malformed package/paths | Từ chối input nguy hiểm, không ghi ra ngoài folder được cấp quyền |
 
-Phần cần duyệt tiếp trong TD-05/ST-01–04: format/package/schema/driver cụ thể, copy policy, cách cấp quyền folder, recovery retention/GC, quota và quyền chạy thử Drive workflow. Định hướng đã được xác nhận ở OPEN_QUESTIONS; chưa có kết quả kiểm chứng hoặc phê duyệt chi tiết từ tài liệu này.
+Phần cần duyệt tiếp trong TD-05/ST-01–04: format/package/schema/driver cụ thể, copy policy, cách cấp quyền folder, recovery retention/GC, quota và quyền chạy thử Drive workflow. Định hướng đã được xác nhận ở OPEN_QUESTIONS; tài liệu này không phê duyệt các chi tiết đó.
+
+## 8. Cập nhật thực nghiệm local — 23/11/2026
+
+User đã cho phép local PoC; các ghi chú chưa chạy/chờ quyền thử ở phần planning
+trên phải đọc cùng [POC_STATUS.md](POC_STATUS.md). Harness SQLite runtime + manual
+JSON + portable ZIP đạt 24 process-crash cases/10 restores, lặp cùng fixtures cũng
+đạt; recovery/shared asset/pinning/locked-file và malformed input có evidence local.
+[STORAGE_RECOVERY_POC_RESULTS.md](STORAGE_RECOVERY_POC_RESULTS.md) ghi rõ giới hạn.
+
+Schema/container/driver vẫn Proposed; không biến ZIP fixture thành quyết định
+production. Power loss, Drive sync và local service security chưa được kiểm.
+Render từ package đạt chức năng nhưng **R0 RAM chưa đạt**, một retry bị monitor
+dừng; chưa đóng toàn bộ gate storage/render hoặc FR-401–407.
