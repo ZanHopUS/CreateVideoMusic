@@ -10,6 +10,14 @@ Ghi nhận này cập nhật các ghi chú “chưa cho phép chạy PoC” tron
 
 ## Current execution
 
+MVP entry proposal 23/11: [MVP Start Here](../MVP_START_HERE.md),
+[exit review](POC_EXIT_REVIEW.md), [ADR-0001 Proposed](../decisions/ADR-0001-LOCAL_MVP_ARCHITECTURE.md)
+và [implementation plan](../planning/MVP_IMPLEMENTATION_PLAN.md) đã được soạn.
+PO đã duyệt conditional entry, ADR/contracts ngày 23/11/2026 qua “duyệt theo đề xuất”.
+G2 chưa đánh Passed; ứng dụng đã bắt đầu S0/S1. Core requirements vẫn giữ nguyên.
+[MVP implementation status](../planning/MVP_IMPLEMENTATION_STATUS.md) là nguồn
+trạng thái application, tách với kết quả harness bên dưới.
+
 - POC-00: Environment smoke completed; corpus/ground truth readiness còn thiếu. Venv riêng, model small pin revision/hash, Remotion/browser đã chuẩn bị.
 - POC-01: Initial runs completed — 12 generated negative-control runs và hai mẫu Việt/Anh user cung cấp, mỗi mẫu đối chứng VAD on/off. Việt (68 cues): WER 88.31% / 36.69%, CER 84.00% / 25.19%. Anh (111 cues, audio 0–300s): WER nguyên SRT 95.67% / 56.85%; loại 9 non-verbal cues trong phép đo bổ sung: 95.48% / 55.33%. Mỗi ngôn ngữ mới một mẫu exploratory, chưa có held-out corpus; chưa kết luận quality gate toàn bộ.
 - POC-01 bổ sung: matched small/medium Việt, seed 42, CPU INT8/4 threads/VAD off — medium WER 23.74%, CER 15.56% so small 36.69%/25.19%; thời gian 392.56s vs 139.27s. Không vượt safety gates; CER vẫn trên mục tiêu clean 15%, chưa chốt model hoặc đánh quality gate Verified. Xem [MEDIUM_ASR_COMPARISON.md](MEDIUM_ASR_COMPARISON.md).
@@ -25,6 +33,9 @@ Ghi nhận này cập nhật các ghi chú “chưa cho phép chạy PoC” tron
 - POC-04 state/template follow-up 23/11: 6 fixtures ×50 edits/undo/redo (300 mỗi loại) khớp state; dirty/history/template isolation và 6 valid bindings đạt. Sửa catalog guard chặn 6 wrong-MIME bindings. Model harness chưa là editor UI. Xem [STATE_TEMPLATE_POC_RESULTS.md](STATE_TEMPLATE_POC_RESULTS.md).
 - POC-05 local: 32 functional checks đạt, gồm 24 process-crash runs/12 phases và 10 portable restores; lặp cùng fixtures trong thư mục mới cũng đạt. SQLite FULL thực, file ENOSPC injected, Windows file lock và independent recovery được kiểm. Chưa thử power loss/Drive hoặc chốt schema/driver/container. Xem [STORAGE_RECOVERY_POC_RESULTS.md](STORAGE_RECOVERY_POC_RESULTS.md).
 - Render từ storage restore: 2 MP4/720 frames và 6 cặp PNG đạt chức năng. **R0 chưa đạt**: concurrency 2 min available 1.850 GiB; concurrency 1 bị dừng dưới 2 GiB liên tục 10s (min 1.651 GiB). Storage repeat cũng có sample 1.992 GiB. Chưa kết luận toàn bộ POC-05/Core Go; cần đủ headroom trước thử render nặng tiếp.
+- Resource admission follow-up: thêm preflight 10 samples RAM trống ≥4 GiB, timeout không khởi chạy child. 5 unittest đạt; một lượt bridge concurrency 1/2×12s đạt chức năng và R0 sampled, min available 2.725 GiB/peak private 1.047 GiB. Giữ fail cũ; chưa là 300s admission stress hoặc nghiệm thu toàn bộ Core. Xem [RENDER_RESOURCE_ADMISSION_RESULTS.md](RENDER_RESOURCE_ADMISSION_RESULTS.md).
+- 300s admission follow-up: harness/validator hỗ trợ `--run-id` riêng, không ghi đè baseline. Lượt TPL03 dọc `admission-01` bị preflight từ chối sau 30s, **render chưa khởi chạy**; không có kết quả R0/R3 mới cho 300s. Unsafe IDs và baseline overwrite guard được kiểm.
+- Windows path follow-up: 3 junction thật/10 escape cases bị chặn, canary và sibling library hash giữ nguyên; chưa thử concurrent replacement/TOCTOU hoặc audit service security. Xem [WINDOWS_PATH_SAFETY_RESULTS.md](WINDOWS_PATH_SAFETY_RESULTS.md).
 - POC-07: Pending — segment suggestions chưa chạy; editor UI và lifecycle coverage đầy đủ còn mở.
 - POC-06: Excluded — local only.
 
@@ -38,4 +49,4 @@ Kết quả alignment, loader compatibility fix và file word/sentence drafts: [
 
 Video để nghe rà soát: [VIETNAMESE_LYRICS_PREVIEW.md](VIETNAMESE_LYRICS_PREVIEW.md). Theo steering của user, hiện ưu tiên tiếng Việt; tối ưu mẫu Anh tạm hoãn.
 
-Checkpoint `ed0ed8f` đã push lên `origin/dev`, gồm Player fidelity, audio EOF và lifecycle cùng các checkpoint trước. Follow-up state/template/local storage hiện trên `dev`, chưa commit/push. Các câu trạng thái Git trong báo cáo cũ ghi thời điểm lập; trạng thái repository hiện tại theo Git history. Chưa chọn stack chính thức hoặc đánh FR Verified.
+Checkpoint `de401aa` đã push lên `origin/dev`, gồm state/template/local storage cùng các checkpoint trước. Follow-ups và application S0/S1 hiện trên `dev`, chưa commit/push. Các câu trạng thái Git trong báo cáo cũ ghi thời điểm lập; trạng thái repository hiện tại theo Git history. ADR/contracts MVP đã Accepted sau xác nhận PO; chưa có FR đầy đủ nào được đánh Verified.

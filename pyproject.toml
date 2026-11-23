@@ -1,0 +1,10 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+exclude = [".venv-api", ".poc", ".local", "poc", "node_modules"]
+
+[tool.ruff.lint]
+select = ["F", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/integration"]

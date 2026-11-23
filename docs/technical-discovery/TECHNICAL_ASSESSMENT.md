@@ -2,6 +2,16 @@
 
 Ngày đánh giá: **22/11/2026 (Asia/Saigon)**. Trạng thái: **đề xuất Technical Discovery; chưa phê duyệt kiến trúc; chưa chạy PoC**.
 
+**Cập nhật 23/11/2026:** nội dung dưới đây giữ lịch sử planning. Các PoC đã thực
+hiện được tổng hợp trong [POC_STATUS](POC_STATUS.md); [exit review](POC_EXIT_REVIEW.md)
+đề nghị chuyển sang MVP có điều kiện. [Hồ sơ MVP](../MVP_START_HERE.md) có ADR,
+contracts và backlog mới, đều Proposed, chưa được coi là architecture Accepted.
+
+**Sau xác nhận PO “duyệt theo đề xuất”:** ADR/contracts đã Accepted, application
+S0/S1 bắt đầu; xem [implementation status](../planning/MVP_IMPLEMENTATION_STATUS.md).
+Các nhận xét Proposed/Not run khác ở đây là lịch sử discovery, không ghi đè quyết
+định mới hoặc tự nâng bằng chứng PoC thành nghiệm thu Core.
+
 **Cập nhật xác nhận 22/11/2026:** Product Owner đã xác nhận 18 định hướng và điều kiện trong [OPEN_QUESTIONS.md](../../OPEN_QUESTIONS.md), gồm SQLite runtime + portable snapshot và cloud tắt mặc định. Các nhận xét “chưa xác nhận” bên dưới phản ánh lúc khảo sát trước cập nhật này; trạng thái mới trong OPEN_QUESTIONS được ưu tiên. Chưa phê duyệt chạy PoC, checkpoint/license, corpus/ngưỡng cụ thể, Remotion hoặc thay đổi layout; không coi toàn bộ TD-01–07 đã được duyệt.
 
 ## 1. Kết luận và giới hạn bằng chứng

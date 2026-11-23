@@ -1,0 +1,30 @@
+{
+  "name": "ai-music-video-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "workers/render"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace @amvs/web",
+    "build": "npm run types && npm run build --workspace @amvs/web",
+    "types": "node scripts/generate-types.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "format:check": "prettier --check \"apps/web/**/*.{ts,tsx,css,json,mjs}\" \"packages/**/*.{ts,tsx,json}\" \"workers/render/*.{tsx,mjs,json}\" \"tests/**/*.ts\" \"scripts/*.mjs\" package.json tsconfig.json vitest.config.ts playwright.config.ts"
+  },
+  "engines": {
+    "node": ">=24.14.1 <25"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "@types/node": "24.19.2",
+    "prettier": "3.10.1",
+    "typescript": "7.0.2",
+    "vitest": "5.1.1"
+  }
+}
