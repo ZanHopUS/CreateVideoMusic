@@ -10,6 +10,8 @@ type DriveState = {
   folderName: string;
   message: string;
   backup: { status: string; message: string };
+  restore: { status: string; message: string };
+  autoSync: boolean;
 };
 
 export function DrivePanel({
@@ -27,6 +29,13 @@ export function DrivePanel({
   const [message, setMessage] = useState('');
   const [authUrl, setAuthUrl] = useState('');
   const [consent, setConsent] = useState(false);
+  const [backups, setBackups] = useState<
+    { id: string; name: string; createdTime?: string }[]
+  >([]);
+  const [selectedBackup, setSelectedBackup] = useState('');
+  const [exports, setExports] = useState<{ sha256: string; bytes: number }[]>(
+    [],
+  );
   useEffect(() => {
     if (!api) return;
     let active = true;
@@ -62,7 +71,8 @@ export function DrivePanel({
       setBusy(false);
     }
   }
-  const running = state?.backup.status === 'running';
+  const running =
+    state?.backup.status === 'running' || state?.restore?.status === 'running';
   return (
     <section className="drive-panel">
       <button
@@ -193,10 +203,101 @@ export function DrivePanel({
             {running ? 'Đang sao lưu…' : 'Sao lưu dữ liệu lên Drive'}
           </button>
           <p aria-live="polite">{state?.backup.message}</p>
+          <label className="rights">
+            <input
+              type="checkbox"
+              checked={Boolean(state?.autoSync)}
+              disabled={!state?.connected || busy || running}
+              onChange={(event) =>
+                perform(async () => {
+                  await api!.json('drive/auto', 'POST', {
+                    enabled: event.target.checked,
+                    confirmed: true,
+                  });
+                })
+              }
+            />
+            Tự sao lưu thay đổi lên Drive khi ứng dụng đang chạy (kiểm tra mỗi
+            30 giây).
+          </label>
+          <div className="drive-restore">
+            <button
+              disabled={!state?.connected || busy || running}
+              onClick={() =>
+                perform(async () => {
+                  const found =
+                    await api!.call<
+                      { id: string; name: string; createdTime?: string }[]
+                    >('drive/backups');
+                  setBackups(found);
+                  setSelectedBackup(found[0]?.id || '');
+                  if (!found.length)
+                    setMessage('Chưa có bản sao lưu trong thư mục này.');
+                })
+              }
+            >
+              Tìm bản sao lưu trên Drive
+            </button>
+            {backups.length > 0 && (
+              <label>
+                Chọn bản để khôi phục
+                <select
+                  aria-label="Bản sao lưu Drive"
+                  value={selectedBackup}
+                  onChange={(event) => setSelectedBackup(event.target.value)}
+                >
+                  {backups.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.createdTime || item.name} · {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <button
+              disabled={!selectedBackup || busy || running}
+              onClick={() =>
+                perform(async () => {
+                  await api!.json('drive/restore', 'POST', {
+                    manifestId: selectedBackup,
+                    confirmed: true,
+                  });
+                })
+              }
+            >
+              Khôi phục project mới từ bản đã chọn
+            </button>
+            <p aria-live="polite">{state?.restore?.message}</p>
+            <button
+              disabled={!api || busy}
+              onClick={() =>
+                perform(async () => {
+                  setExports(
+                    await api!.call<{ sha256: string; bytes: number }[]>(
+                      'drive/exports',
+                    ),
+                  );
+                })
+              }
+            >
+              Xem MP4 đã khôi phục
+            </button>
+            {exports.map((file) => (
+              <a
+                key={file.sha256}
+                href={`/api/v1/drive/exports/${file.sha256}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Tải MP4 {file.sha256.slice(0, 10)} ·{' '}
+                {(file.bytes / 1024 / 1024).toFixed(1)} MB ↗
+              </a>
+            ))}
+          </div>
           <small>
             Bản local vẫn được giữ. Mỗi lượt tạo bản sao riêng và dùng thêm
-            quota. Chưa tự đồng bộ khi chỉnh sửa, chưa hỗ trợ khôi phục từ Drive
-            trong giao diện.
+            quota. Project đang có trên máy sẽ không bị ghi đè. Tự sao lưu cần
+            bật riêng; máy phải đang chạy và có mạng.
           </small>
         </div>
       )}

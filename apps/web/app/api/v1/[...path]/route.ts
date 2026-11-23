@@ -20,6 +20,25 @@ async function proxy(request: NextRequest) {
       { status: 403 },
     );
   const path = request.nextUrl.pathname;
+  if (path === '/api/v1/session/bootstrap' && request.method === 'GET') {
+    // Only JavaScript loaded from our exact local UI origin can obtain a session.
+    // Browsers cannot forge Sec-Fetch-Site or read this response cross-origin.
+    if (
+      request.headers.get('sec-fetch-site') !== 'same-origin' ||
+      request.headers.get('referer') !== `${origin}/` ||
+      !process.env.AMVS_SESSION
+    )
+      return new Response(null, { status: 403 });
+    return Response.json(
+      { session: process.env.AMVS_SESSION },
+      {
+        headers: {
+          'cache-control': 'no-store',
+          'referrer-policy': 'no-referrer',
+        },
+      },
+    );
+  }
   if (!/^\/api\/v1\/[a-zA-Z0-9/_-]+$/.test(path))
     return new Response(null, { status: 400 });
   const headers = new Headers();

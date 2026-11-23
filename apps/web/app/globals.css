@@ -629,3 +629,8 @@ footer {
   line-height: 1.6;
   color: #b8b8cb;
 }
+.upload-hint {
+  color: #f3c16b;
+  font-size: 13px;
+  max-width: 310px;
+}

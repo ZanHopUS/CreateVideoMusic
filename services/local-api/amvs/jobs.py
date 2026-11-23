@@ -54,17 +54,22 @@ class Jobs:
     def start(self, project, grant):
         validate(project, self.store.assets())
         if (
-            project["templateRef"]["id"] != "TPL-01"
+            project["templateRef"]["id"] not in {"TPL-01", "TPL-02"}
             or project["lyrics"]
             or any(i["type"] not in {"image", "video", "audio", "text"} for i in project["items"])
         ):
-            raise ValueError("Hiện hỗ trợ template TPL-01 với ảnh/video, nhạc và caption.")
+            raise ValueError("Hiện hỗ trợ TPL-01/02 với ảnh/video, nhạc và chữ.")
         if project["preset"] != {"width": 720, "height": 1280, "fps": 30}:
             raise ValueError("Lượt đầu hỗ trợ 720p30 dọc.")
         if not any(i["type"] in {"image", "video"} for i in project["items"]) or not any(
             i["type"] == "audio" for i in project["items"]
         ):
             raise ValueError("Hãy thêm ảnh hoặc video và nhạc trước khi xuất.")
+        if (
+            project["templateRef"]["id"] == "TPL-02"
+            and sum(i["type"] == "image" for i in project["items"]) < 2
+        ):
+            raise ValueError("Music Card cần ít nhất hai ảnh.")
         id = uuid.uuid4().hex
         job = {
             "schemaVersion": "amvs-job/1",

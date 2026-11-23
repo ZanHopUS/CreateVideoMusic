@@ -1,4 +1,5 @@
 'use client';
+import { useRef, useState } from 'react';
 import { Player } from '@remotion/player';
 import { ProjectScene } from '@amvs/composition';
 import { TICKS } from '@amvs/domain';
@@ -7,6 +8,8 @@ import { Timeline } from './timeline';
 import { Inspector } from './inspector';
 import { DrivePanel } from './drive-panel';
 export function Studio() {
+  const rightsInput = useRef<HTMLInputElement>(null);
+  const [uploadHint, setUploadHint] = useState('');
   const {
     apiClient,
     prepareBackup,
@@ -106,7 +109,7 @@ export function Studio() {
             <button
               className="primary large"
               disabled={!ready || busy}
-              onClick={create}
+              onClick={() => create()}
             >
               ＋ Tạo video mới
             </button>
@@ -114,7 +117,7 @@ export function Studio() {
               <button
                 className="template-card"
                 disabled={!ready || busy}
-                onClick={create}
+                onClick={() => create()}
               >
                 <div className="artwork">
                   <span>
@@ -130,13 +133,17 @@ export function Studio() {
                   <span className="tag">Bắt đầu tại đây ↗</span>
                 </div>
               </button>
-              <div className="template-card upcoming">
+              <button
+                className="template-card"
+                disabled={!ready || busy}
+                onClick={() => create('TPL-02')}
+              >
                 <div className="artwork second">◉</div>
                 <div>
                   <strong>Music Card</strong>
-                  <small>Đang phát triển</small>
+                  <small>Hai ảnh, nhạc và thẻ bài hát.</small>
                 </div>
-              </div>
+              </button>
               <div className="template-card upcoming">
                 <div className="artwork third">
                   lời hát
@@ -194,9 +201,13 @@ export function Studio() {
               <div className="import-bar">
                 <label className="rights">
                   <input
+                    ref={rightsInput}
                     type="checkbox"
                     checked={rights}
-                    onChange={(e) => setRights(e.target.checked)}
+                    onChange={(e) => {
+                      setRights(e.target.checked);
+                      if (e.target.checked) setUploadHint('');
+                    }}
                   />
                   Tôi có quyền sử dụng media này
                 </label>
@@ -206,8 +217,17 @@ export function Studio() {
                     aria-label="Thêm ảnh, video hoặc nhạc"
                     type="file"
                     multiple
-                    disabled={busy || !rights}
+                    disabled={busy}
                     accept="image/png,image/jpeg,video/mp4,audio/*"
+                    onClick={(event) => {
+                      if (!rights) {
+                        event.preventDefault();
+                        setUploadHint(
+                          'Tích ô “Tôi có quyền sử dụng media này” trước khi chọn file.',
+                        );
+                        rightsInput.current?.focus();
+                      }
+                    }}
                     onChange={(e) => {
                       const files = Array.from(e.target.files ?? []);
                       if (files.length) upload(files);
@@ -215,6 +235,11 @@ export function Studio() {
                     }}
                   />
                 </label>
+                {uploadHint && (
+                  <span className="upload-hint" role="status">
+                    {uploadHint}
+                  </span>
+                )}
               </div>
               <Timeline
                 assets={assets}
@@ -243,6 +268,12 @@ export function Studio() {
               assets={assets}
               reorder={reorder}
               remove={removeSelected}
+              cardText={(id, text) =>
+                change((p) => {
+                  const item = p.items.find((i) => i.id === id);
+                  if (item) item.text = text;
+                })
+              }
               rename={(name) =>
                 change((p) => {
                   p.name = name;

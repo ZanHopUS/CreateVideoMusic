@@ -1,5 +1,6 @@
 """Explicit cloud checkpoints; working SQLite and manual-save state stay local."""
 
+import hashlib
 import json
 import tempfile
 import threading
@@ -17,6 +18,49 @@ class DriveBackup:
         self.lock = threading.Lock()
         self.thread = None
         self.state = {"status": "idle", "message": "Chưa sao lưu lên Drive."}
+        self.stop_signal = threading.Event()
+        self.monitor = None
+
+    def start_monitor(self):
+        if not self.monitor:
+            self.monitor = threading.Thread(target=self.auto_loop, daemon=True)
+            self.monitor.start()
+
+    def auto_loop(self):
+        while not self.stop_signal.wait(30):
+            try:
+                if self.status()["status"] == "failed":
+                    self.stop_signal.wait(300)
+                if not self.drive.status()["autoSync"] or self.status()["status"] == "running":
+                    continue
+                if self.inventory_fingerprint() != (self.drive.status()["lastBackup"] or {}).get(
+                    "fingerprint"
+                ):
+                    self.start()
+            except Exception:
+                self.stop_signal.wait(300)
+
+    def inventory_fingerprint(self):
+        with self.store.connect() as db:
+            rows = [
+                list(db.execute("SELECT id,metadata FROM assets ORDER BY id")),
+                list(db.execute("SELECT id,body,view,revision FROM projects ORDER BY id")),
+                list(db.execute("SELECT id,body FROM jobs ORDER BY id")),
+            ]
+        # Job progress changes should not trigger repeated cloud snapshots.
+        jobs = [
+            (id, row)
+            for id, raw in rows[2]
+            if (row := parse_json(raw)).get("status") == "succeeded"
+        ]
+        payload = [
+            list(map(tuple, rows[0])),
+            list(map(tuple, rows[1])),
+            [(id, row.get("outputFile")) for id, row in jobs],
+        ]
+        return hashlib.sha256(
+            json.dumps(payload, ensure_ascii=False, sort_keys=True).encode()
+        ).hexdigest()
 
     def status(self):
         with self.lock:
@@ -51,6 +95,7 @@ class DriveBackup:
             )
 
     def copy(self):
+        fingerprint = self.inventory_fingerprint()
         # One SQLite read transaction captures a coherent inventory, never DB bytes.
         with self.store.connect() as db:
             db.execute("BEGIN")
@@ -83,6 +128,27 @@ class DriveBackup:
             "projects": [],
             "exports": [],
         }
+        previous_assets = {}
+        last = self.drive.status().get("lastBackup") or {}
+        if last.get("manifestId"):
+            try:
+                old = self.drive.request(
+                    "GET",
+                    API + "/" + last["manifestId"],
+                    headers=self.drive.auth(),
+                    params={"fields": "size,md5Checksum,trashed"},
+                ).json()
+                if not old.get("trashed") and int(old["size"]) <= 16 * 1024**2:
+                    with tempfile.TemporaryDirectory(
+                        prefix="drive-prev-", dir=self.store.root / "runtime"
+                    ) as prior:
+                        path = Path(prior) / "manifest.json"
+                        self.drive.download(
+                            last["manifestId"], path, int(old["size"]), old["md5Checksum"]
+                        )
+                        previous_assets = parse_json(path.read_bytes()).get("assets", {})
+            except (DriveError, ValueError, KeyError):
+                previous_assets = {}
         for id, asset in catalog.items():
             self.patch(
                 message=f"Đang sao lưu media ({len(manifest['assets']) + 1}/{len(catalog)})…"
@@ -90,7 +156,27 @@ class DriveBackup:
             path = self.store.asset_path(asset)
             if digest_file(path) != id:
                 raise DriveError("Media local sai checksum.")
-            copied = self.drive.upload(path, folders["Media"], asset["file"], asset["mime"])
+            copied = None
+            candidate = previous_assets.get(id, {})
+            if candidate.get("bytes") == asset["bytes"] and candidate.get("file") == asset["file"]:
+                try:
+                    meta = self.drive.request(
+                        "GET",
+                        API + "/" + candidate["fileId"],
+                        headers=self.drive.auth(),
+                        params={"fields": "parents,trashed,size,md5Checksum"},
+                    ).json()
+                    if (
+                        not meta.get("trashed")
+                        and folders["Media"] in meta.get("parents", [])
+                        and int(meta.get("size", -1)) == asset["bytes"]
+                        and meta.get("md5Checksum") == candidate.get("md5")
+                    ):
+                        copied = {key: candidate[key] for key in ("fileId", "bytes", "md5")}
+                except (DriveError, KeyError, ValueError):
+                    pass
+            if copied is None:
+                copied = self.drive.upload(path, folders["Media"], asset["file"], asset["mime"])
             manifest["assets"][id] = {**asset, **copied}
         with tempfile.TemporaryDirectory(prefix="drive-", dir=self.store.root / "runtime") as stage:
             stage = Path(stage)
@@ -154,6 +240,7 @@ class DriveBackup:
                 "assets": len(catalog),
                 "projects": len(projects),
                 "exports": len(manifest["exports"]),
+                "fingerprint": fingerprint,
             }
             self.drive.persist()
         self.patch(
@@ -162,6 +249,9 @@ class DriveBackup:
         )
 
     def close(self):
+        self.stop_signal.set()
+        if self.monitor:
+            self.monitor.join(timeout=2)
         # Request timeouts are bounded. Do not close the HTTP client during an upload.
         if self.thread:
             self.thread.join()

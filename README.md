@@ -29,6 +29,12 @@ không dừng browser hay ứng dụng khác, không xóa dữ liệu project.
 
 ## Thử luồng đầu tiên
 
+**Music Card (TPL-02):** từ dashboard chọn Music Card, nhập hai ảnh (ảnh đầu
+làm đoạn mở, ảnh thứ hai là bìa thẻ) và một file nhạc. Đổi tên bài/nghệ sĩ trong
+panel Thuộc tính. Thẻ và thanh tiến trình dùng cùng scene cho preview/MP4;
+hiện chỉ xuất preset dọc 720×1280/30 FPS. Chọn/đảo thứ tự clip có thể thay đổi
+ảnh bìa; kiểm preview trước khi xuất.
+
 1. Chọn **Tạo video mới**. Xác nhận quyền dùng media, chọn nhiều PNG/JPEG, MP4
    H.264 và WAV PCM16/MP3/M4A AAC trong một lần nhập. Batch đầu chia thời lượng
    hình ảnh/video theo project và giới hạn nguồn; nhập thêm nối clip, không thay

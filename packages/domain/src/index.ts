@@ -162,6 +162,40 @@ export function newProject(id: string, name = 'Video của tôi'): ProjectConten
     assetRefs: [],
   };
 }
+export function newMusicCardProject(id: string): ProjectContent {
+  const project = newProject(id, 'Music Card của tôi');
+  project.templateRef = { id: 'TPL-02', version: 1 };
+  project.items = [
+    {
+      ...project.items[0],
+      id: 'song-title',
+      text: 'Tên bài hát',
+      startTicks: 0,
+      style: {
+        fontFamily: 'Segoe UI',
+        fontSize: 54,
+        color: '#ffffff',
+        x: 68,
+        y: 890,
+      },
+    },
+    {
+      ...project.items[0],
+      id: 'artist-name',
+      text: 'Tên nghệ sĩ',
+      startTicks: 0,
+      style: {
+        fontFamily: 'Segoe UI',
+        fontSize: 32,
+        color: '#d5d9e8',
+        x: 68,
+        y: 975,
+      },
+    },
+  ];
+  validateProject(project);
+  return project;
+}
 export class History {
   private current: ProjectContent;
   private past: ProjectContent[] = [];

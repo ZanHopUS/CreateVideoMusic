@@ -113,6 +113,7 @@ class Drive:
                 "folderName": self.data.get("name", ""),
                 "message": self.message,
                 "lastBackup": self.data.get("lastBackup"),
+                "autoSync": bool(self.data.get("autoSync")),
             }
 
     def configure(self, credentials, folder):
@@ -334,8 +335,17 @@ class Drive:
         with self.lock:
             self.pending = None
             self.data.pop("tokens", None)
+            self.data["autoSync"] = False
             self.persist()
             self.message = "Đã ngắt kết nối trên máy. Có thể thu hồi quyền tại tài khoản Google."
+            return self.status()
+
+    def set_auto(self, enabled):
+        with self.lock:
+            if enabled and not self.data.get("tokens"):
+                raise DriveError("Hãy kết nối Drive trước khi bật tự sao lưu.")
+            self.data["autoSync"] = bool(enabled)
+            self.persist()
             return self.status()
 
     def close(self):
@@ -432,3 +442,44 @@ class Drive:
                 "Checksum hoặc kích thước trên Drive không khớp; snapshot chưa hoàn tất."
             )
         return {"fileId": result["id"], "bytes": size, "md5": md5.hexdigest()}
+
+    def download(self, file_id, target, expected_bytes, expected_md5, expected_sha256=None):
+        if not re.fullmatch(r"[A-Za-z0-9_-]{10,200}", str(file_id)):
+            raise DriveError("ID file Drive không hợp lệ.")
+        if (
+            not isinstance(expected_bytes, int)
+            or expected_bytes < 0
+            or expected_bytes > 2 * 1024**3
+        ):
+            raise DriveError("Kích thước bản sao lưu không hợp lệ.")
+        md5, sha = hashlib.md5(usedforsecurity=False), hashlib.sha256()
+        count = 0
+        created = False
+        try:
+            with self.client.stream(
+                "GET", API + "/" + file_id, params={"alt": "media"}, headers=self.auth()
+            ) as response:
+                if response.status_code != 200:
+                    raise DriveError("Không đọc được file Drive đã sao lưu.")
+                with target.open("xb") as output:
+                    created = True
+                    for chunk in response.iter_bytes(1024**2):
+                        count += len(chunk)
+                        if count > expected_bytes:
+                            raise DriveError("File Drive lớn hơn manifest; đã dừng tải.")
+                        output.write(chunk)
+                        md5.update(chunk)
+                        sha.update(chunk)
+            if (
+                count != expected_bytes
+                or md5.hexdigest() != expected_md5
+                or (expected_sha256 and sha.hexdigest() != expected_sha256)
+            ):
+                raise DriveError("Checksum file Drive không khớp manifest.")
+        except httpx.HTTPError:
+            raise DriveError("Không tải được Drive. Kiểm tra mạng rồi thử lại.") from None
+        except BaseException:
+            if created:
+                target.unlink(missing_ok=True)
+            raise
+        return sha.hexdigest()

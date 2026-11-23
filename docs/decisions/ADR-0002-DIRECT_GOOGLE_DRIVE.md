@@ -19,6 +19,12 @@ Picker; từ chối chọn khác hoặc scope rộng hơn. Việc cấp quyền 
 thay thế quyền của ứng dụng. Theo [Google desktop OAuth](https://developers.google.com/identity/protocols/oauth2/native-app)
 và [Picker desktop](https://developers.google.com/workspace/drive/picker/guides/desktop-mobile-picker).
 
+UI mở bằng URL local thường có thể lấy session hiện hành từ Next route cùng origin
+qua browser fetch. Route yêu cầu Host đúng, `Sec-Fetch-Site: same-origin` và
+Referer là trang Studio, trả `no-store`; không cấp qua điều hướng trực tiếp hoặc
+nguồn ngoài. Token vẫn chỉ ở memory của tab, không ghi URL/query/storage. Đây là
+bổ sung cho cơ chế launcher, để tab mới trong trình duyệt local dùng được UI.
+
 Client config và tokens lưu bằng Windows DPAPI theo user, ngoài Git và snapshot;
 không có plaintext fallback. DPAPI không bảo vệ trước mã độc chạy cùng tài khoản
 Windows. [Microsoft DPAPI](https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata).
@@ -32,14 +38,16 @@ hoặc render temp. Không xóa nguồn; không đánh dấu autosave thành man
 
 ## Giới hạn và cửa kiểm chứng
 
-- Hiện là checkpoint qua nút bấm; mỗi lượt copy lại media/output, tăng quota.
-  Dedup, retry tiếp tục sau restart, tự đồng bộ và quota preflight chưa có.
+- Có tùy chọn tự sao lưu mỗi 30 giây khi app chạy. Media đã xác minh có thể dùng
+  lại cùng Drive file ID; project/MP4 snapshot mới vẫn tăng quota. Retry tiếp tục
+  sau restart và quota preflight chưa có.
 - Lyrics trong state project đi cùng snapshot; chưa có importer lyrics/file lyrics
   riêng hay reusable-template upload. Hai folder tương ứng mới được dành chỗ.
-- Chưa đọc/import kho Drive, restore khác máy, relink/cache eviction hay xử lý
+- Có tìm manifest và restore project mới vào SQLite local, không ghi đè project
+  hiện có. Đã restore 4/4 project từ bản cloud thật vào workspace thử riêng.
+  Fixture PNG/H.264 MP4/WAV và MP4 xuất đã round-trip checksum trên Drive thật.
+  Chưa chứng minh restore khác máy, relink/cache eviction hay xử lý
   concurrent editing. Do đó chưa hoàn thành yêu cầu “Drive là kho chính mọi thứ”.
-- Chưa login/upload/round-trip thật vì thiếu OAuth client của ứng dụng. Test dùng
-  Google transport giả không chứng minh tài khoản, Picker hoặc quota tương thích.
 - Giữ nguyên dữ liệu local đến khi restore + hash/content parity thật đạt.
 
 Tiếp theo: cấu hình client, người dùng đăng nhập, thử fixture có quyền sử dụng;

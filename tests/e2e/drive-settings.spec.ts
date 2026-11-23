@@ -6,10 +6,11 @@ test('Drive: cấu hình và hủy OAuth local, chưa truy cập Google thật',
   baseURL,
 }) => {
   const token = 'e2e-disposable-session-' + 'x'.repeat(48);
-  await page.goto('/#session=' + token);
+  await page.goto('/');
   const toggle = page.getByRole('button', { name: /Kho Google Drive/ });
   await expect(toggle).toBeEnabled();
   await toggle.click();
+  await expect(page.getByLabel('Link thư mục Drive')).toBeVisible();
   await page
     .getByLabel('Link thư mục Drive')
     .fill('https://drive.google.com/drive/folders/fixture_folder_12345');
@@ -54,4 +55,22 @@ test('Drive: cấu hình và hủy OAuth local, chưa truy cập Google thật',
   });
   expect((await state.json()).connected).toBe(false);
   expect(await state.text()).not.toContain('fixture-only-secret');
+});
+
+test('Phiên local không cấp cho yêu cầu ngoài trang Studio', async ({
+  request,
+  baseURL,
+}) => {
+  const cases: Record<string, string>[] = [
+    {},
+    { 'sec-fetch-site': 'cross-site', referer: 'https://example.com/' },
+    { 'sec-fetch-site': 'same-origin', referer: 'https://example.com/' },
+  ];
+  for (const headers of cases) {
+    const response = await request.get(`${baseURL}/api/v1/session/bootstrap`, {
+      headers,
+    });
+    expect(response.status()).toBe(403);
+    expect(await response.text()).not.toContain('e2e-disposable-session');
+  }
 });

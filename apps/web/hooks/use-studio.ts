@@ -6,6 +6,7 @@ import {
   contentHash,
   History,
   newProject,
+  newMusicCardProject,
   TICKS,
   type ProjectContent,
   type TimelineItem,
@@ -86,23 +87,46 @@ export function useStudio() {
     }
   }, [project]);
   useEffect(() => {
-    const token = new URLSearchParams(location.hash.slice(1)).get('session');
-    if (!token) {
-      setMessage(
-        'Hãy mở studio bằng scripts/start.ps1 để tạo phiên làm việc local.',
-      );
-      return;
+    let active = true;
+    const fromFragment = new URLSearchParams(location.hash.slice(1)).get(
+      'session',
+    );
+    if (fromFragment) window.history.replaceState(null, '', location.pathname);
+    async function connect() {
+      try {
+        const token =
+          fromFragment ||
+          (await fetch('/api/v1/session/bootstrap', {
+            cache: 'no-store',
+            credentials: 'same-origin',
+          }).then(async (response) => {
+            if (!response.ok)
+              throw new Error(
+                'Không mở được phiên Studio. Hãy chạy scripts/start.ps1 -Restart.',
+              );
+            return (await response.json()).session as string;
+          }));
+        if (!active) return;
+        if (typeof token !== 'string' || !token)
+          throw new Error('Phiên Studio không hợp lệ.');
+        api.current = new Api(token);
+        await api.current.call('session');
+        await refresh();
+        if (active) {
+          setReady(true);
+          setMessage('Studio local đã sẵn sàng.');
+        }
+      } catch (error) {
+        if (active)
+          setMessage(
+            error instanceof Error ? error.message : 'Không mở được Studio.',
+          );
+      }
     }
-    window.history.replaceState(null, '', location.pathname);
-    api.current = new Api(token);
-    api.current
-      .call('session')
-      .then(() => refresh())
-      .then(() => {
-        setReady(true);
-        setMessage('Studio local đã sẵn sàng.');
-      })
-      .catch((e) => setMessage(e.message));
+    connect();
+    return () => {
+      active = false;
+    };
   }, [refresh]);
   useEffect(() => {
     if (!project) return;
@@ -226,7 +250,7 @@ export function useStudio() {
       )
     );
   }
-  async function create() {
+  async function create(template: 'TPL-01' | 'TPL-02' = 'TPL-01') {
     if (!canLeave()) return;
     await perform(async () => {
       if (latest.current) await sync(latest.current);
@@ -234,7 +258,9 @@ export function useStudio() {
         await api.current!.json<RecordState>(
           'projects',
           'POST',
-          newProject(crypto.randomUUID()),
+          template === 'TPL-02'
+            ? newMusicCardProject(crypto.randomUUID())
+            : newProject(crypto.randomUUID()),
         ),
       );
       await refresh();

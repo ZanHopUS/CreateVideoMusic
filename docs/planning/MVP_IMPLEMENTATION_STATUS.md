@@ -1,9 +1,15 @@
 # MVP Implementation Status — S0 / S1
 
-**Drive trực tiếp:** [thiết lập và kết quả local](DIRECT_DRIVE_SETUP.md) có UI
-OAuth/Picker và sao lưu checkpoint qua API; 9 Drive integration tests + 1 browser
-case đạt. Chưa có OAuth client thật, chưa cloud round-trip, chưa tự sync/restore.
-Không coi yêu cầu kho chính trên Drive hoàn tất.
+**S2 Music Card:** [kết quả triển khai](S2_MUSIC_CARD_RESULTS.md) có TPL-02
+chọn được, tên bài/nghệ sĩ, ảnh bìa và progress cùng scene. MP4 chức năng 3s
+đã kiểm bằng test-only admission 3 GiB; production 4 GiB chưa đủ RAM để qua gate.
+
+**Drive trực tiếp:** [thiết lập và kết quả](DIRECT_DRIVE_SETUP.md) có OAuth/Picker,
+sao lưu, tìm backup và khôi phục project mới. Tài khoản thật đã kết nối; bản cloud
+4 project/0 media/0 MP4 đã restore 4/4 vào workspace thử. Fixture khác có PNG,
+H.264 MP4 nguồn, WAV và MP4 xuất đã round-trip SHA; media trùng được dùng lại.
+Tự sao lưu 30 giây là tùy chọn, mặc định tắt; chưa đo chạy dài hoặc chuyển PC.
+Chưa coi kho Drive chính hoàn tất.
 
 Ngày: **23/11/2026**. PO đã duyệt [ADR-0001](../decisions/ADR-0001-LOCAL_MVP_ARCHITECTURE.md)
 và [contracts](../architecture/MVP_CONTRACTS.md) qua “duyệt theo đề xuất”. Conditional

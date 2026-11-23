@@ -15,7 +15,7 @@ prepare_video()
 run = Path(os.environ["AMVS_TEST_RUN"]).resolve()
 assert run.is_relative_to((ROOT / ".local").resolve())
 run.mkdir(parents=True, exist_ok=True)
-app = create_app(workspace=run / "workspace")
+app = create_app(workspace=run / "workspace", headroom=float(os.environ.get("AMVS_TEST_HEADROOM_GIB", "4")))
 for scope in ["project", "export"]:
     folder = run / scope
     folder.mkdir(exist_ok=True)

@@ -10,8 +10,10 @@ from urllib.parse import parse_qs, urlparse
 import httpx
 import pytest
 from amvs.app import create_app
-from amvs.drive import FOLDER, SCOPE, Drive, DriveError, folder_id, protect
+from amvs.domain import content_hash
+from amvs.drive import API, FOLDER, SCOPE, Drive, DriveError, folder_id, protect
 from amvs.drive_backup import DriveBackup
+from amvs.drive_restore import DriveRestore
 from amvs.store import Store
 from fastapi.testclient import TestClient
 
@@ -275,3 +277,103 @@ def test_drive_routes_require_session_origin_and_explicit_upload_consent(tmp_pat
             == 409
         )
         assert client.get("/api/v1/drive", headers=headers).json()["connected"] is False
+
+
+def test_restore_new_project_and_preserve_existing_project(tmp_path):
+    project = json.loads((Path(__file__).parents[1] / "fixtures/project.json").read_text())
+    project["id"] = "restored-fixture"
+    snapshot = "a" * 32
+    envelope = {
+        "format": "amvs-manual/1",
+        "project": project,
+        "contentHash": content_hash(project),
+        "view": {},
+        "assets": {},
+    }
+    project_bytes = json.dumps(envelope).encode()
+    manifest = {
+        "format": "amvs-drive-checkpoint/1",
+        "snapshotId": snapshot,
+        "assets": {},
+        "projects": [
+            {
+                "id": project["id"],
+                "revision": 1,
+                "contentHash": content_hash(project),
+                "fileId": "project_fixture_123",
+                "bytes": len(project_bytes),
+                "md5": hashlib.md5(project_bytes).hexdigest(),
+            }
+        ],
+    }
+    manifest_bytes = json.dumps(manifest).encode()
+    selected = {
+        "id": "manifest_fixture_123",
+        "name": snapshot + ".json",
+        "bytes": len(manifest_bytes),
+        "md5": hashlib.md5(manifest_bytes).hexdigest(),
+    }
+    payloads = {selected["id"]: manifest_bytes, "project_fixture_123": project_bytes}
+
+    class FakeDrive:
+        data = {"folder": "root_fixture_123"}
+
+        def status(self):
+            return {"connected": True}
+
+        def child_folder(self, _, name):
+            return "folder_" + name
+
+        def auth(self):
+            return {"Authorization": "Bearer fixture"}
+
+        def request(self, _, url, **kwargs):
+            if url == API:
+                return httpx.Response(
+                    200,
+                    json={
+                        "files": [
+                            {
+                                **selected,
+                                "size": str(selected["bytes"]),
+                                "md5Checksum": selected["md5"],
+                            }
+                        ]
+                    },
+                )
+            return httpx.Response(
+                200, json={"parents": ["folder_Projects"], "size": str(len(project_bytes))}
+            )
+
+        def download(self, id, target, size, md5, expected_sha256=None):
+            data = payloads[id]
+            assert len(data) == size and hashlib.md5(data).hexdigest() == md5
+            target.write_bytes(data)
+
+    store = Store(tmp_path / "workspace")
+    restore = DriveRestore(FakeDrive(), store)
+    assert restore.list()[0]["id"] == selected["id"]
+    assert restore.restore(selected) == 1
+    assert store.load(project["id"])["contentHash"] == content_hash(project)
+    assert restore.restore(selected) == 0
+    store.update(project["id"], {**project, "name": "Bản local đã sửa"}, 1)
+    assert restore.restore(selected) == 0
+    assert store.load(project["id"])["project"]["name"] == "Bản local đã sửa"
+    payloads["project_fixture_123"] = b"corrupt" + project_bytes
+    with pytest.raises(Exception):
+        restore.restore(selected)
+    assert store.load(project["id"])["project"]["name"] == "Bản local đã sửa"
+
+
+@pytest.mark.skipif(os.name != "nt", reason="DPAPI")
+def test_failed_download_keeps_preexisting_local_file(tmp_path):
+    drive, _ = make_drive(tmp_path, lambda _: httpx.Response(200, content=b"new-data"))
+    drive.data["tokens"] = {**tokens(), "expires_at": time.time() + 3600}
+    existing = tmp_path / "existing.mp4"
+    existing.write_bytes(b"keep-this")
+    try:
+        with pytest.raises(FileExistsError):
+            drive.download("remote_fixture_123", existing, 8, hashlib.md5(b"new-data").hexdigest())
+        assert existing.read_bytes() == b"keep-this"
+    finally:
+        drive.close()

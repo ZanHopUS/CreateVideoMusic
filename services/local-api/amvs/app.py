@@ -18,6 +18,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from .domain import ROOT, parse_json
 from .drive import Drive, DriveError
 from .drive_backup import DriveBackup
+from .drive_restore import DriveRestore
 from .jobs import Jobs
 from .media import probe
 from .store import Conflict, Store, contained
@@ -46,15 +47,18 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
     jobs = Jobs(store, headroom=headroom)
     drive = Drive(store.root)
     drive_backup = DriveBackup(drive, store)
+    drive_restore = DriveRestore(drive, store)
     grants = {}
     picker_lock = asyncio.Lock()
     drive_control = asyncio.Lock()
 
     @asynccontextmanager
     async def lifespan(_):
+        drive_backup.start_monitor()
         yield
         await asyncio.to_thread(jobs.shutdown)
         await asyncio.to_thread(drive_backup.close)
+        await asyncio.to_thread(drive_restore.close)
         await asyncio.to_thread(drive.close)
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
@@ -63,6 +67,7 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
     app.state.grants = grants
     app.state.drive = drive
     app.state.drive_backup = drive_backup
+    app.state.drive_restore = drive_restore
 
     @app.middleware("http")
     async def security(request, call_next):
@@ -77,7 +82,8 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
         header = request.headers.get("authorization", "")
         auth = header[7:] if header.startswith("Bearer ") else ""
         media = request.method in {"GET", "HEAD"} and re.fullmatch(
-            r"/api/v1/(assets/[a-f0-9]{64}/content|outputs/[a-f0-9]{32})", request.url.path
+            r"/api/v1/(assets/[a-f0-9]{64}/content|outputs/[a-f0-9]{32}|drive/exports/[a-f0-9]{64})",
+            request.url.path,
         )
         if not auth and media:
             auth = request.cookies.get("amvs_media", "")
@@ -141,11 +147,18 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
 
     @app.get("/api/v1/drive")
     def drive_status():
-        return {**drive.status(), "backup": drive_backup.status()}
+        return {
+            **drive.status(),
+            "backup": drive_backup.status(),
+            "restore": drive_restore.status(),
+        }
 
     def drive_idle():
-        if drive_backup.status()["status"] == "running":
-            raise DriveError("Đang sao lưu Drive. Hãy chờ hoàn tất trước khi đổi đăng nhập.")
+        if (
+            drive_backup.status()["status"] == "running"
+            or drive_restore.status()["status"] == "running"
+        ):
+            raise DriveError("Đang chuyển dữ liệu Drive. Hãy chờ hoàn tất trước khi đổi đăng nhập.")
 
     @app.post("/api/v1/drive/configure")
     async def drive_configure(request: Request):
@@ -168,12 +181,62 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
             drive_idle()
             return await asyncio.to_thread(drive.disconnect)
 
+    @app.post("/api/v1/drive/auto")
+    async def drive_auto(request: Request):
+        data = await body(request)
+        if (
+            set(data) != {"enabled", "confirmed"}
+            or not isinstance(data["enabled"], bool)
+            or data["confirmed"] is not True
+        ):
+            raise ValueError("Cần đồng ý bật hoặc tắt tự sao lưu Drive.")
+        async with drive_control:
+            drive_idle()
+            return await asyncio.to_thread(drive.set_auto, data["enabled"])
+
     @app.post("/api/v1/drive/backup")
     async def backup_drive(request: Request):
         if await body(request) != {"confirmed": True}:
             raise ValueError("Cần đồng ý tải bản sao lên Drive.")
         async with drive_control:
+            drive_idle()
             return JSONResponse(drive_backup.start(), status_code=202)
+
+    @app.get("/api/v1/drive/backups")
+    async def drive_backups():
+        return await asyncio.to_thread(drive_restore.list)
+
+    @app.post("/api/v1/drive/restore")
+    async def restore_drive(request: Request):
+        data = await body(request)
+        if set(data) != {"manifestId", "confirmed"} or data["confirmed"] is not True:
+            raise ValueError("Cần chọn bản sao lưu để khôi phục.")
+        async with drive_control:
+            drive_idle()
+            return JSONResponse(
+                await asyncio.to_thread(drive_restore.start, data["manifestId"]), status_code=202
+            )
+
+    @app.get("/api/v1/drive/exports")
+    def drive_exports():
+        root = contained(store.root / "exports", store.root)
+        if not root.is_dir():
+            return []
+        return [
+            {"sha256": p.stem, "bytes": p.stat().st_size}
+            for p in root.glob("*.mp4")
+            if re.fullmatch(r"[a-f0-9]{64}", p.stem)
+        ]
+
+    @app.get("/api/v1/drive/exports/{sha}")
+    def download_drive_export(sha: str):
+        if not re.fullmatch(r"[a-f0-9]{64}", sha):
+            raise ValueError("MP4 ID không hợp lệ.")
+        root = contained(store.root / "exports", store.root)
+        file = contained(root / (sha + ".mp4"), root)
+        if not file.is_file():
+            raise FileNotFoundError("MP4 chưa khôi phục.")
+        return FileResponse(file, media_type="video/mp4", filename=file.name)
 
     async def choose(open_file=False):
         async with picker_lock:

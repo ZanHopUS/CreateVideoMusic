@@ -104,6 +104,12 @@ test('S2: lỗi một file trong batch không làm mất clip hợp lệ hoặc 
   await page.getByRole('button', { name: 'Tạo video mới' }).click();
   await page.getByLabel('Tên project').fill('Import có lỗi');
   await page.getByLabel('Tên project').blur();
+  await page.getByLabel('Thêm ảnh, video hoặc nhạc').click();
+  await expect(
+    page.getByText(
+      'Tích ô “Tôi có quyền sử dụng media này” trước khi chọn file.',
+    ),
+  ).toBeVisible();
   await page.getByLabel('Tôi có quyền sử dụng media này').check();
   await page.getByLabel('Thêm ảnh, video hoặc nhạc').setInputFiles([
     {

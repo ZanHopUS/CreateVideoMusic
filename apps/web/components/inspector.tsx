@@ -10,6 +10,7 @@ export function Inspector({
   assets,
   reorder,
   remove,
+  cardText,
 }: {
   project: ProjectContent;
   item?: TimelineItem;
@@ -19,6 +20,7 @@ export function Inspector({
   assets: Asset[];
   reorder: (direction: -1 | 1) => void;
   remove: () => void;
+  cardText: (id: 'song-title' | 'artist-name', text: string) => void;
 }) {
   return (
     <aside className="inspector">
@@ -48,6 +50,31 @@ export function Inspector({
         />
       </label>
       <div className="divider" />
+      {project.templateRef.id === 'TPL-02' && (
+        <>
+          <div className="section-label">MUSIC CARD</div>
+          {(
+            [
+              ['song-title', 'Tên bài hát'],
+              ['artist-name', 'Tên nghệ sĩ'],
+            ] as const
+          ).map(([id, label]) => (
+            <label key={id}>
+              {label}
+              <input
+                aria-label={label}
+                key={project.id + id}
+                defaultValue={
+                  project.items.find((i) => i.id === id)?.text ?? ''
+                }
+                onBlur={(event) => cardText(id, event.target.value.trim())}
+              />
+            </label>
+          ))}
+          <small>Ảnh thứ nhất mở đầu; ảnh thứ hai là bìa Music Card.</small>
+          <div className="divider" />
+        </>
+      )}
       {item ? (
         <>
           <div className="section-label">CLIP ĐANG CHỌN</div>

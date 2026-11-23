@@ -27,7 +27,7 @@ Mỗi FR liên kết tới test/AC trong SRS. Các phần chưa làm giữ **Not
 | FR-303 | Split, duplicate, snapping, lock/hide track | M | AC-18 / IT-18 | Not implemented | Not run |
 | FR-304 | Crop/fit/blur, brightness cơ bản; zoom/pan/rotate/filter nâng cao | C/M | AC-19 / IT-19 | Partial — Cover/contain; crop/blur/brightness pending | S2 fit/persistence tested; full AC pending |
 | FR-305 | Hiệu ứng fade/slide/scale trong Core; presets mở rộng ở M | C/M | AC-20 / IT-20 | Not implemented | Not run |
-| FR-306 | Music Card: cover, song/artist, progress; chỉnh layout/color nâng cao | C/M | AC-21 / E2E-21 | Not implemented | Not run |
+| FR-306 | Music Card: cover, song/artist, progress; chỉnh layout/color nâng cao | C/M | AC-21 / E2E-21 | Partial — TPL-02 two-image card, editable song/artist, progress preview/render | Functional MP4 test passed at test-only 3 GiB; production 4 GiB admission and full AC pending |
 | FR-307 | Preview và export dùng một timeline canonical, thống nhất z-order và timing | C | AC-22 / IT-22 | Partial — Shared TPL-01 image/video scene; full fidelity pending | Sparse CFR source/order checks; full AC pending |
 | FR-401 | Tạo/đổi tên/mở/xóa project, chọn folder lưu, lưu thủ công | C | AC-23 / E2E-23 | Partial — Create/rename/save/open; delete UI pending | Slice tested; full AC pending |
 | FR-402 | Khôi phục timeline, lyrics, effects, template và references khi mở lại | C | AC-24 / E2E-24 | Partial — TPL-01 content/playhead; full state pending | Slice tested; full AC pending |
