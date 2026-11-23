@@ -56,15 +56,15 @@ class Jobs:
         if (
             project["templateRef"]["id"] != "TPL-01"
             or project["lyrics"]
-            or any(i["type"] not in {"image", "audio", "text"} for i in project["items"])
+            or any(i["type"] not in {"image", "video", "audio", "text"} for i in project["items"])
         ):
-            raise ValueError("Lượt đầu chỉ hỗ trợ mẫu Ảnh + Caption + Nhạc.")
+            raise ValueError("Hiện hỗ trợ template TPL-01 với ảnh/video, nhạc và caption.")
         if project["preset"] != {"width": 720, "height": 1280, "fps": 30}:
             raise ValueError("Lượt đầu hỗ trợ 720p30 dọc.")
-        if not any(i["type"] == "image" for i in project["items"]) or not any(
+        if not any(i["type"] in {"image", "video"} for i in project["items"]) or not any(
             i["type"] == "audio" for i in project["items"]
         ):
-            raise ValueError("Hãy thêm ảnh và nhạc trước khi xuất.")
+            raise ValueError("Hãy thêm ảnh hoặc video và nhạc trước khi xuất.")
         id = uuid.uuid4().hex
         job = {
             "schemaVersion": "amvs-job/1",

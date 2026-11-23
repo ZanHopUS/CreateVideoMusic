@@ -5,7 +5,6 @@ import json
 import os
 import secrets
 import socket
-import subprocess
 import sys
 import time
 import urllib.request
@@ -13,6 +12,13 @@ import webbrowser
 from pathlib import Path
 
 import psutil
+from launcher_lifecycle import (
+    AlreadyRunning,
+    WindowsOwnership,
+    record_path,
+    stop_owner,
+    write_owner,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -29,7 +35,20 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--smoke", action="store_true")
+    parser.add_argument("--restart", action="store_true")
+    parser.add_argument("--stop", action="store_true")
     args = parser.parse_args()
+    if args.restart or args.stop:
+        stop_owner(ROOT)
+    if args.stop:
+        print("Đã dừng launcher của workspace nếu có.", flush=True)
+        return
+    try:
+        ownership = WindowsOwnership(ROOT)
+    except AlreadyRunning as error:
+        print(str(error), flush=True)
+        return
+    write_owner(ROOT)
     api_port, web_port = port(), port()
     while web_port == api_port:
         web_port = port()
@@ -52,6 +71,7 @@ def main():
         / "node_modules/.remotion/chrome-headless-shell/win64/chrome-headless-shell-win64/chrome-headless-shell.exe"
     )
     if not browser.is_file():
+        ownership.close()
         raise SystemExit("Chưa có browser render. Chạy scripts/setup.ps1 trước.")
     env["AMVS_BROWSER"] = str(browser)
     logs = ROOT / ".local/logs"
@@ -92,15 +112,17 @@ def main():
         ]:
             output = (logs / f"{name}.log").open("w", encoding="utf-8")
             files.append(output)
-            processes.append(
-                subprocess.Popen(command, cwd=cwd, env=env, stdout=output, stderr=subprocess.STDOUT)
-            )
+            processes.append(ownership.launch(command, cwd=cwd, env=env, stdout=output, stderr=-2))
         for _ in range(120):
             if any(p.poll() is not None for p in processes):
                 raise RuntimeError("Dịch vụ không khởi chạy; xem .local/logs.")
             try:
-                urllib.request.urlopen(f"http://127.0.0.1:{api_port}/health", timeout=1).close()
-                urllib.request.urlopen(origin, timeout=1).close()
+                urllib.request.build_opener(urllib.request.ProxyHandler({})).open(
+                    f"http://127.0.0.1:{api_port}/health", timeout=1
+                ).close()
+                urllib.request.build_opener(urllib.request.ProxyHandler({})).open(
+                    origin, timeout=1
+                ).close()
                 break
             except OSError:
                 time.sleep(1)
@@ -127,6 +149,7 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
+        ownership.close()
         for process in processes:
             if process.poll() is not None:
                 continue
@@ -149,6 +172,9 @@ def main():
                 pass
         for output in files:
             output.close()
+        path = record_path(ROOT)
+        if path.exists() and json.loads(path.read_text()).get("pid") == os.getpid():
+            path.unlink()
 
 
 if __name__ == "__main__":

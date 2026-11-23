@@ -10,6 +10,72 @@ import av
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def visual_checks(folder, job, assets):
+    """Sparse RGB comparisons for generated 9:16 fixtures, outside the caption area."""
+    project = job["project"]
+    fps = project["preset"]["fps"]
+    visuals = [i for i in project["items"] if i["type"] in {"image", "video"}]
+    targets = {round((i["startTicks"] + i["durationTicks"] / 2) * fps / 48000): i for i in visuals}
+    decoded = {}
+    with av.open(job["outputFile"]) as media:
+        for index, frame in enumerate(media.decode(video=0)):
+            if index in targets:
+                decoded[index] = frame
+
+    def pixel(frame, x, y):
+        rgb = frame.reformat(format="rgb24")
+        offset = y * rgb.planes[0].line_size + x * 3
+        return tuple(memoryview(rgb.planes[0])[offset : offset + 3])
+
+    rows = []
+    for index, item in targets.items():
+        source = (folder / "workspace/library" / assets[item["assetId"]]["file"]).resolve()
+        assert source.is_relative_to((folder / "workspace/library").resolve())
+        tick = index * 48000 / fps
+        source_time = (
+            item["sourceStartTicks"]
+            + (tick - item["startTicks"])
+            * item["speed"]["numerator"]
+            / item["speed"]["denominator"]
+        ) / 48000
+        reference = None
+        with av.open(str(source)) as media:
+            for frame in media.decode(video=0):
+                reference = frame
+                if (
+                    item["type"] == "image"
+                    or float(frame.pts * frame.time_base) >= source_time - 0.000001
+                ):
+                    break
+        assert reference is not None
+        final = decoded[index]
+        assert abs(reference.width / reference.height - final.width / final.height) < 0.000001, (
+            "This fixture comparison requires matching aspect ratios"
+        )
+        errors = []
+        for x, y in [(0.3, 0.2), (0.5, 0.2), (0.7, 0.2), (0.3, 0.4), (0.5, 0.4), (0.7, 0.4)]:
+            sx, sy = int(x * reference.width), int(y * reference.height)
+            before = pixel(reference, sx, sy)
+            # Match texel centers when upscaling, rather than sampling a bar
+            # boundary at the same normalized edge coordinate.
+            fx = round((sx + 0.5) * final.width / reference.width - 0.5)
+            fy = round((sy + 0.5) * final.height / reference.height - 0.5)
+            after = pixel(final, fx, fy)
+            errors.extend(abs(a - b) for a, b in zip(before, after))
+        mean_error = sum(errors) / len(errors)
+        assert mean_error <= 20, ("Visual source/order mismatch", index, item["type"], mean_error)
+        rows.append(
+            {
+                "output_frame": index,
+                "type": item["type"],
+                "source_time_s": source_time,
+                "mean_abs_rgb_error": mean_error,
+                "threshold": 20,
+            }
+        )
+    return rows
+
+
 def main():
     passed = []
     for folder in (ROOT / ".local/e2e").iterdir():
@@ -17,13 +83,23 @@ def main():
         if file.is_file():
             stats = json.loads(file.read_text(encoding="utf-8")).get("stats", {})
             if stats.get("expected", 0) > 0 and stats.get("unexpected", 0) == 0:
-                passed.append(folder)
+                db = folder / "workspace/runtime/studio.sqlite"
+                if db.exists():
+                    with sqlite3.connect(db) as connection:
+                        if any(
+                            json.loads(r[0])["status"] == "succeeded"
+                            for r in connection.execute("SELECT body FROM jobs")
+                        ):
+                            passed.append(folder)
     if not passed:
         raise RuntimeError("No passing browser run to validate")
     folder = sorted(passed)[-1]
     database = sqlite3.connect(folder / "workspace/runtime/studio.sqlite")
     try:
         jobs = [json.loads(row[0]) for row in database.execute("SELECT body FROM jobs")]
+        assets = {
+            row[0]: json.loads(row[1]) for row in database.execute("SELECT id,metadata FROM assets")
+        }
     finally:
         database.close()
     rows = []
@@ -80,6 +156,7 @@ def main():
                 "timestamp_errors": errors,
                 "decoded_audio_samples": audio_samples,
                 "sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+                "visual_checks": visual_checks(folder, job, assets),
                 "peak_child_private_gib": max(s["private_bytes"] for s in samples) / 1024**3,
                 "min_global_available_gib": min(s["system_available_bytes"] for s in samples)
                 / 1024**3,
@@ -88,7 +165,7 @@ def main():
         )
     assert rows, "No successful output to validate"
     result = {"all_passed": True, "run_id": folder.name, "outputs": rows}
-    evidence = folder / "independent-validation.json"
+    evidence = folder / "independent-validation-s2.json"
     if evidence.exists():
         assert json.loads(evidence.read_text()) == result, "Preserve earlier validation evidence"
     else:

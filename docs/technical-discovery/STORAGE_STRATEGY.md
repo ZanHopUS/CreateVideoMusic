@@ -1,5 +1,10 @@
 # Storage Strategy — Đề xuất để kiểm chứng
 
+**Cập nhật yêu cầu 23/11/2026:** người dùng chọn Google Drive trên web trực tiếp.
+[ADR-0002](../decisions/ADR-0002-DIRECT_GOOGLE_DRIVE.md) thay phương thức Drive
+desktop bên dưới bằng adapter OAuth/API tùy chọn. Các phần desktop là lịch sử
+discovery; không còn là yêu cầu cài đặt. SQLite/temp vẫn local; cloud chưa nghiệm thu.
+
 Ngày: **22/11/2026 (Asia/Saigon)**. Trạng thái: **định hướng SQLite runtime + portable snapshot đã được xác nhận; chi tiết còn Proposed**; POC-05 **Not run**. Giữ yêu cầu E/F/G: manual save, mở lại đầy đủ state, folder local, recovery riêng, personal library và Drive desktop snapshot.
 
 **Cập nhật xác nhận 22/11/2026:** Product Owner đã xác nhận ST-01–04 theo [OPEN_QUESTIONS.md](../../OPEN_QUESTIONS.md). Định hướng SQLite runtime, package versioned/checksummed/relative paths, backend kiểm quyền folder, immutable snapshot sync và cleanup có xác nhận đã được chấp nhận. Driver/schema/container, copy policy, retention/quota và bằng chứng crash/restore chưa chốt; chưa được phép chạy POC-05.

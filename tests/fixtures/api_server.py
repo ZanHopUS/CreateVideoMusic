@@ -8,9 +8,10 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "services/local-api"))
 sys.path.insert(0, str(ROOT / "scripts"))
 from amvs.app import create_app
-from test_assets import prepare
+from test_assets import prepare, prepare_video
 
 prepare()
+prepare_video()
 run = Path(os.environ["AMVS_TEST_RUN"]).resolve()
 assert run.is_relative_to((ROOT / ".local").resolve())
 run.mkdir(parents=True, exist_ok=True)

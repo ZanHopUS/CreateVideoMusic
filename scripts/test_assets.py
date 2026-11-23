@@ -2,6 +2,7 @@
 
 import math
 import struct
+import subprocess
 import wave
 import zlib
 from pathlib import Path
@@ -41,6 +42,16 @@ def prepare():
         + chunk(b"IDAT", zlib.compress(data))
         + chunk(b"IEND", b"")
     )
+    # A second, distinct generated image enables order/reference assertions.
+    second = bytes(
+        (byte ^ 0x5A) if index % (width * 3 + 1) else 0 for index, byte in enumerate(data)
+    )
+    (folder / "artwork-2.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(second))
+        + chunk(b"IEND", b"")
+    )
     rate = 48000
     with wave.open(str(folder / "control.wav"), "wb") as audio:
         audio.setparams((1, 2, rate, 0, "NONE", "not compressed"))
@@ -54,6 +65,38 @@ def prepare():
                 )
             )
     return folder
+
+
+def prepare_video():
+    import imageio_ffmpeg
+
+    folder = ROOT / ".local/test-assets"
+    folder.mkdir(parents=True, exist_ok=True)
+    target = folder / "background.mp4"
+    if not target.exists():
+        subprocess.run(
+            [
+                imageio_ffmpeg.get_ffmpeg_exe(),
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-n",
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc2=size=180x320:rate=30",
+                "-t",
+                "4",
+                "-an",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                str(target),
+            ],
+            check=True,
+        )
+    return target
 
 
 if __name__ == "__main__":

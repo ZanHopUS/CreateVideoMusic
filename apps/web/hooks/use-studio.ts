@@ -9,6 +9,10 @@ import {
   TICKS,
   type ProjectContent,
   type TimelineItem,
+  appendMedia,
+  reorderClip,
+  removeClip,
+  validateMediaWindows,
 } from '@amvs/domain';
 import { Api, type Asset, type Job, type RecordState } from '../lib/api';
 
@@ -30,6 +34,8 @@ export function useStudio() {
   const latest = useRef<ProjectContent | null>(null),
     serial = useRef<Promise<unknown>>(Promise.resolve());
   const pendingSeek = useRef<{ id: string; frame: number } | null>(null);
+  const assetsRef = useRef<Asset[]>([]);
+  const operationBusy = useRef(false);
   function show(p: ProjectContent) {
     latest.current = p;
     setProject(p);
@@ -68,7 +74,8 @@ export function useStudio() {
   }, []);
   const refresh = useCallback(async () => {
     const client = api.current!;
-    setAssets(await client.call<Asset[]>('assets'));
+    assetsRef.current = await client.call<Asset[]>('assets');
+    setAssets(assetsRef.current);
     setProjects(await client.call<{ id: string; name: string }[]>('projects'));
   }, []);
   useEffect(() => {
@@ -117,11 +124,16 @@ export function useStudio() {
   }, [project, dirty]);
   function change(operation: (p: ProjectContent) => void) {
     try {
-      history.current!.edit(operation);
+      history.current!.edit((p) => {
+        operation(p);
+        validateMediaWindows(p, assetsRef.current);
+      });
       show(history.current!.read());
       setMessage('Đã cập nhật bản nháp.');
+      return true;
     } catch (e) {
       setMessage((e as Error).message);
+      return false;
     }
   }
   async function sync(snapshot: ProjectContent): Promise<RecordState> {
@@ -174,23 +186,35 @@ export function useStudio() {
       ['succeeded', 'failed', 'cancelled', 'interrupted'].includes(job.status)
     )
       return;
+    let active = true;
     const timer = setInterval(
       () =>
         api
           .current!.call<Job>(`jobs/${job.id}`)
-          .then(setJob)
+          .then((value) => {
+            if (active) setJob(value);
+          })
           .catch((e) => setMessage(e.message)),
       1000,
     );
-    return () => clearInterval(timer);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
   }, [job]);
   async function perform(action: () => Promise<void>) {
+    if (operationBusy.current) {
+      setMessage('Hãy chờ thao tác hiện tại hoàn tất.');
+      return;
+    }
+    operationBusy.current = true;
     setBusy(true);
     try {
       await action();
     } catch (e) {
       setMessage((e as Error).message);
     } finally {
+      operationBusy.current = false;
       setBusy(false);
     }
   }
@@ -266,45 +290,49 @@ export function useStudio() {
       );
     });
   }
-  async function upload(file: File) {
+  async function upload(files: File[]) {
     await perform(async () => {
       if (!rights)
         throw new Error('Hãy xác nhận quyền dùng media trước khi nhập.');
-      const form = new FormData();
-      form.set('file', file);
-      form.set('rightsConfirmed', 'true');
-      const asset = await api.current!.call<Asset>('assets', {
-        method: 'POST',
-        body: form,
-      });
+      const projectId = latest.current?.id;
+      const imported: Asset[] = [],
+        errors: string[] = [];
+      for (const file of files) {
+        const form = new FormData();
+        form.set('file', file);
+        form.set('rightsConfirmed', 'true');
+        try {
+          imported.push(
+            await api.current!.call<Asset>('assets', {
+              method: 'POST',
+              body: form,
+            }),
+          );
+        } catch (error) {
+          errors.push(`${file.name}: ${(error as Error).message}`);
+        }
+      }
       await refresh();
-      if (asset.kind === 'video')
+      if (latest.current?.id !== projectId)
         throw new Error(
-          'Mẫu đầu tiên dùng ảnh. Video đã có trong thư viện cho bước tiếp theo.',
+          'Project đã đổi. Media đã nhập vẫn nằm trong thư viện.',
         );
-      const type = asset.kind,
-        trackId = type === 'image' ? 'background' : 'music';
-      change((p) => {
-        p.items = p.items.filter((i) => i.type !== type);
-        if (!p.assetRefs.includes(asset.id)) p.assetRefs.push(asset.id);
-        p.items.push({
-          id: crypto.randomUUID(),
-          trackId,
-          type,
-          assetId: asset.id,
-          startTicks: 0,
-          durationTicks:
-            type === 'audio'
-              ? Math.min(p.durationTicks, asset.durationTicks)
-              : p.durationTicks,
-          sourceStartTicks: 0,
-          speed: { numerator: 1, denominator: 1 },
-          volume: 1,
-        });
-        p.assetRefs = [
-          ...new Set(p.items.flatMap((i) => (i.assetId ? [i.assetId] : []))),
-        ];
-      });
+      if (imported.length) {
+        const applied = change((p) =>
+          Object.assign(p, appendMedia(p, imported)),
+        );
+        if (!applied) return;
+        const last = latest
+          .current!.items.slice()
+          .reverse()
+          .find((i) => i.assetId === imported.at(-1)!.id);
+        if (last) setSelected(last.id);
+      }
+      setMessage(
+        errors.length
+          ? `Đã thêm ${imported.length}/${files.length} file. ${errors.join(' · ')}`
+          : 'Đã cập nhật bản nháp.',
+      );
     });
   }
   function editItem(op: (item: TimelineItem) => void) {
@@ -312,15 +340,14 @@ export function useStudio() {
       const item = p.items.find((i) => i.id === selected);
       if (!item) return;
       op(item);
-      if (item.assetId && item.type === 'audio') {
-        const asset = assets.find((a) => a.id === item.assetId);
-        if (
-          asset &&
-          item.sourceStartTicks + item.durationTicks > asset.durationTicks
-        )
-          throw new Error('Đoạn cắt vượt thời lượng nhạc.');
-      }
     });
+  }
+  function reorder(direction: -1 | 1) {
+    change((p) => Object.assign(p, reorderClip(p, selected, direction)));
+  }
+  function removeSelected() {
+    if (change((p) => Object.assign(p, removeClip(p, selected))))
+      setSelected('');
   }
   const urls = Object.fromEntries(
     assets.map((a) => [a.id, `/api/v1/assets/${a.id}/content`]),
@@ -357,6 +384,10 @@ export function useStudio() {
     });
   }
   return {
+    apiClient: ready ? api.current : null,
+    prepareBackup: async () => {
+      if (latest.current) await sync(latest.current);
+    },
     ready,
     message,
     project,
@@ -375,6 +406,9 @@ export function useStudio() {
     save,
     render,
     upload,
+    assets,
+    reorder,
+    removeSelected,
     editItem,
     change,
     undo,

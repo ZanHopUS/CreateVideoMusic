@@ -1,8 +1,18 @@
 # MVP Implementation Status — S0 / S1
 
+**Drive trực tiếp:** [thiết lập và kết quả local](DIRECT_DRIVE_SETUP.md) có UI
+OAuth/Picker và sao lưu checkpoint qua API; 9 Drive integration tests + 1 browser
+case đạt. Chưa có OAuth client thật, chưa cloud round-trip, chưa tự sync/restore.
+Không coi yêu cầu kho chính trên Drive hoàn tất.
+
 Ngày: **23/11/2026**. PO đã duyệt [ADR-0001](../decisions/ADR-0001-LOCAL_MVP_ARCHITECTURE.md)
 và [contracts](../architecture/MVP_CONTRACTS.md) qua “duyệt theo đề xuất”. Conditional
-entry được chấp thuận, không phải G2/G4/G5 Passed. Git `dev`, chưa commit/push.
+entry được chấp thuận, không phải G2/G4/G5 Passed. Git `dev`.
+
+**Cập nhật S2:** [nhiều media + launcher](S2_MEDIA_EDITOR_RESULTS.md) đã có evidence
+17 Vitest, 14 pytest, 2 browser render cases + 1 partial-import case. Nội dung S0/S1
+bên dưới là checkpoint lịch sử `90d3d60` đã push; thay đổi S2 thuộc lượt triển khai này.
+Chưa coi toàn bộ S2 hoặc Core hoàn tất.
 
 ## Đã triển khai
 

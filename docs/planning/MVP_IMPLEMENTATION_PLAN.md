@@ -1,6 +1,10 @@
 # MVP Implementation Plan
 
 Ngày: **23/11/2026**. Status: **Approved for S0 → S1**, theo “duyệt theo đề xuất”.
+
+Cập nhật: user yêu cầu “triển khai” sau kế hoạch tiếp theo, cho phép bắt đầu S2;
+[task nhiều media đầu tiên](S2_MEDIA_EDITOR_RESULTS.md) có evidence, các phần S2
+khác vẫn tiếp tục theo acceptance dưới đây. Không tự nâng gate release.
 [ADR](../decisions/ADR-0001-LOCAL_MVP_ARCHITECTURE.md), [contracts](../architecture/MVP_CONTRACTS.md)
 và conditional entry đã được duyệt; application implementation đã bắt đầu.
 [Trạng thái thực tế](MVP_IMPLEMENTATION_STATUS.md) tách khỏi kế hoạch dưới đây;

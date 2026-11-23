@@ -5,8 +5,11 @@ import { TICKS } from '@amvs/domain';
 import { useStudio } from '../hooks/use-studio';
 import { Timeline } from './timeline';
 import { Inspector } from './inspector';
+import { DrivePanel } from './drive-panel';
 export function Studio() {
   const {
+    apiClient,
+    prepareBackup,
     ready,
     message,
     project,
@@ -25,6 +28,9 @@ export function Studio() {
     save,
     render,
     upload,
+    assets,
+    reorder,
+    removeSelected,
     editItem,
     change,
     undo,
@@ -45,6 +51,7 @@ export function Studio() {
         {projects.map((p) => (
           <button
             key={p.id}
+            disabled={busy}
             onClick={() => open(p.id)}
             className={project?.id === p.id ? 'current-project' : ''}
           >
@@ -52,7 +59,8 @@ export function Studio() {
           </button>
         ))}
         <div className="local-badge">
-          <i /> Chạy trên máy của bạn<small>Không gửi media lên cloud</small>
+          <i /> Chạy trên máy của bạn
+          <small>Drive chỉ tải lên khi bạn chọn sao lưu</small>
         </div>
       </aside>
       <main>
@@ -79,6 +87,7 @@ export function Studio() {
             )}
           </div>
         </header>
+        <DrivePanel api={apiClient} beforeBackup={prepareBackup} />
         {!project ? (
           <section className="dashboard">
             <div className="eyebrow">
@@ -192,21 +201,23 @@ export function Studio() {
                   Tôi có quyền sử dụng media này
                 </label>
                 <label className={`upload-button ${busy ? 'disabled' : ''}`}>
-                  ＋ Thêm ảnh / nhạc
+                  ＋ Thêm ảnh / video / nhạc
                   <input
-                    aria-label="Thêm ảnh hoặc nhạc"
+                    aria-label="Thêm ảnh, video hoặc nhạc"
                     type="file"
+                    multiple
                     disabled={busy || !rights}
-                    accept="image/png,image/jpeg,audio/*"
+                    accept="image/png,image/jpeg,video/mp4,audio/*"
                     onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) upload(file);
+                      const files = Array.from(e.target.files ?? []);
+                      if (files.length) upload(files);
                       e.target.value = '';
                     }}
                   />
                 </label>
               </div>
               <Timeline
+                assets={assets}
                 project={project}
                 selected={selected}
                 select={setSelected}
@@ -229,6 +240,9 @@ export function Studio() {
               project={project}
               item={project.items.find((i) => i.id === selected)}
               edit={editItem}
+              assets={assets}
+              reorder={reorder}
+              remove={removeSelected}
               rename={(name) =>
                 change((p) => {
                   p.name = name;

@@ -1,4 +1,5 @@
-import type { ProjectContent, TimelineItem } from '@amvs/domain';
+import type { ProjectContent } from '@amvs/domain';
+import type { Asset } from '../lib/api';
 import { TICKS } from '@amvs/domain';
 const names = {
   background: 'Hình ảnh',
@@ -12,12 +13,14 @@ export function Timeline({
   select,
   move,
   seek,
+  assets,
 }: {
   project: ProjectContent;
   selected: string;
   select: (id: string) => void;
   move: (id: string, start: number) => void;
   seek: (frame: number) => void;
+  assets: Asset[];
 }) {
   return (
     <section className="timeline">
@@ -57,6 +60,12 @@ export function Timeline({
               .map((item) => (
                 <button
                   key={item.id}
+                  data-clip-id={item.id}
+                  aria-label={
+                    item.type === 'text'
+                      ? `Chú thích ${item.text}`
+                      : `${item.type === 'audio' ? 'Nhạc' : item.type === 'video' ? 'Video' : 'Ảnh'} ${assets.find((a) => a.id === item.assetId)?.name ?? 'Media'}`
+                  }
                   className={`clip ${track.kind} ${selected === item.id ? 'selected' : ''}`}
                   style={{
                     left: `${(item.startTicks / project.durationTicks) * 100}%`,
@@ -64,15 +73,20 @@ export function Timeline({
                   }}
                   onClick={() => select(item.id)}
                   onPointerDown={(event) => {
+                    select(item.id);
                     const startX = event.clientX,
                       width =
                         event.currentTarget.parentElement!.getBoundingClientRect()
                           .width;
                     const up = (e: PointerEvent) => {
                       document.removeEventListener('pointerup', up);
-                      const delta = Math.round(
-                        ((e.clientX - startX) / width) * project.durationTicks,
-                      );
+                      const frame = project.timebase / project.preset.fps;
+                      const delta =
+                        Math.round(
+                          (((e.clientX - startX) / width) *
+                            project.durationTicks) /
+                            frame,
+                        ) * frame;
                       if (Math.abs(e.clientX - startX) > 3)
                         move(
                           item.id,
@@ -90,9 +104,7 @@ export function Timeline({
                 >
                   {item.type === 'text'
                     ? item.text
-                    : item.type === 'audio'
-                      ? '♫ Nhạc'
-                      : '▧ Ảnh'}
+                    : `${item.type === 'audio' ? '♫' : item.type === 'video' ? '▶' : '▧'} ${assets.find((a) => a.id === item.assetId)?.name ?? 'Media'}`}
                 </button>
               ))}
           </div>

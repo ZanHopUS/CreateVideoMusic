@@ -16,6 +16,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 
 from .domain import ROOT, parse_json
+from .drive import Drive, DriveError
+from .drive_backup import DriveBackup
 from .jobs import Jobs
 from .media import probe
 from .store import Conflict, Store, contained
@@ -42,18 +44,25 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
     api_host = api_host or os.environ.get("AMVS_API_HOST", "127.0.0.1:8765")
     store = Store(workspace or os.environ.get("AMVS_WORKSPACE", str(ROOT / ".local/workspace")))
     jobs = Jobs(store, headroom=headroom)
+    drive = Drive(store.root)
+    drive_backup = DriveBackup(drive, store)
     grants = {}
     picker_lock = asyncio.Lock()
+    drive_control = asyncio.Lock()
 
     @asynccontextmanager
     async def lifespan(_):
         yield
         await asyncio.to_thread(jobs.shutdown)
+        await asyncio.to_thread(drive_backup.close)
+        await asyncio.to_thread(drive.close)
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store = store
     app.state.jobs = jobs
     app.state.grants = grants
+    app.state.drive = drive
+    app.state.drive_backup = drive_backup
 
     @app.middleware("http")
     async def security(request, call_next):
@@ -76,6 +85,8 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
             return JSONResponse({"code": "SESSION", "message": "Phiên làm việc đã hết hạn."}, 401)
         try:
             response = await call_next(request)
+        except DriveError as error:
+            return JSONResponse({"code": "DRIVE", "message": str(error)}, 409)
         except (ValueError, KeyError, PermissionError, FileNotFoundError, Conflict) as error:
             status = (
                 413
@@ -117,7 +128,8 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
         response = JSONResponse(
             {
                 "scope": "local",
-                "cloudEnabled": False,
+                "cloudEnabled": False,  # Cloud AI remains disabled; Drive is separate opt-in storage.
+                "driveConnected": drive.status()["connected"],
                 "templates": ["TPL-01"],
                 "maxUploadBytes": 2 * 1024**3,
             }
@@ -126,6 +138,42 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
         # an HttpOnly same-site session cookie; all writes still require a header.
         response.set_cookie("amvs_media", token, httponly=True, samesite="strict", path="/api/v1")
         return response
+
+    @app.get("/api/v1/drive")
+    def drive_status():
+        return {**drive.status(), "backup": drive_backup.status()}
+
+    def drive_idle():
+        if drive_backup.status()["status"] == "running":
+            raise DriveError("Đang sao lưu Drive. Hãy chờ hoàn tất trước khi đổi đăng nhập.")
+
+    @app.post("/api/v1/drive/configure")
+    async def drive_configure(request: Request):
+        data = await body(request)
+        if set(data) != {"credentials", "folder"} or len(json.dumps(data)) > 32768:
+            raise ValueError("Cấu hình Drive không hợp lệ.")
+        async with drive_control:
+            drive_idle()
+            return await asyncio.to_thread(drive.configure, data["credentials"], data["folder"])
+
+    @app.post("/api/v1/drive/connect")
+    async def drive_connect():
+        async with drive_control:
+            drive_idle()
+            return await asyncio.to_thread(drive.begin)
+
+    @app.post("/api/v1/drive/disconnect")
+    async def drive_disconnect():
+        async with drive_control:
+            drive_idle()
+            return await asyncio.to_thread(drive.disconnect)
+
+    @app.post("/api/v1/drive/backup")
+    async def backup_drive(request: Request):
+        if await body(request) != {"confirmed": True}:
+            raise ValueError("Cần đồng ý tải bản sao lên Drive.")
+        async with drive_control:
+            return JSONResponse(drive_backup.start(), status_code=202)
 
     async def choose(open_file=False):
         async with picker_lock:

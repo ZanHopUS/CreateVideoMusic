@@ -31,14 +31,15 @@ test('TPL01: import → edit → undo/redo → save/reopen → background MP4', 
   await page.getByLabel('Độ dài video', { exact: true }).fill('2');
   await page.getByLabel('Tôi có quyền sử dụng media này').check();
   await page
-    .getByLabel('Thêm ảnh hoặc nhạc')
+    .getByLabel('Thêm ảnh, video hoặc nhạc')
     .setInputFiles(path.resolve('.local/test-assets/artwork.png'));
   await expect(page.getByRole('status')).toContainText('Đã cập nhật bản nháp');
-  await expect(page.getByLabel('Thêm ảnh hoặc nhạc')).toBeEnabled();
+  await expect(page.getByLabel('Thêm ảnh, video hoặc nhạc')).toBeEnabled();
   await page
-    .getByLabel('Thêm ảnh hoặc nhạc')
+    .getByLabel('Thêm ảnh, video hoặc nhạc')
     .setInputFiles(path.resolve('.local/test-assets/control.wav'));
   await expect(page.locator('.clip.music')).toBeVisible();
+  await page.locator('.clip.text').click();
   await page.getByLabel('Nội dung caption').fill('Một giai điệu riêng');
   await page.getByLabel('Nội dung caption').blur();
   await expect(page.locator('.clip.text')).toContainText('Một giai điệu riêng');

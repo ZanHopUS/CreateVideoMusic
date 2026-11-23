@@ -1,17 +1,24 @@
 import type { ProjectContent, TimelineItem } from '@amvs/domain';
 import { TICKS } from '@amvs/domain';
+import type { Asset } from '../lib/api';
 export function Inspector({
   project,
   item,
   edit,
   rename,
   duration,
+  assets,
+  reorder,
+  remove,
 }: {
   project: ProjectContent;
   item?: TimelineItem;
   edit: (operation: (item: TimelineItem) => void) => void;
   rename: (name: string) => void;
   duration: (seconds: number) => void;
+  assets: Asset[];
+  reorder: (direction: -1 | 1) => void;
+  remove: () => void;
 }) {
   return (
     <aside className="inspector">
@@ -49,8 +56,54 @@ export function Inspector({
               ? 'Chú thích'
               : item.type === 'audio'
                 ? 'Âm nhạc'
-                : 'Hình ảnh'}
+                : item.type === 'video'
+                  ? 'Video nền'
+                  : 'Hình ảnh'}
           </h3>
+          {item.assetId && (
+            <p className="asset-caption">
+              {assets.find((a) => a.id === item.assetId)?.name ??
+                'Media không tìm thấy'}
+            </p>
+          )}
+          {['image', 'video', 'audio'].includes(item.type) && (
+            <div className="clip-actions">
+              <button
+                aria-label="Đưa clip lên trước"
+                onClick={() => reorder(-1)}
+              >
+                ← Trước
+              </button>
+              <button aria-label="Đưa clip ra sau" onClick={() => reorder(1)}>
+                Sau →
+              </button>
+            </div>
+          )}
+          {['image', 'video', 'audio'].includes(item.type) && (
+            <small className="edit-hint">
+              Đổi thứ tự sẽ xếp các clip liền nhau trong track.
+            </small>
+          )}
+          {['image', 'video'].includes(item.type) && (
+            <label>
+              Cách hiển thị
+              <select
+                aria-label="Cách hiển thị"
+                value={item.style?.fit ?? 'cover'}
+                onChange={(e) =>
+                  edit((i) => {
+                    i.style = {
+                      ...i.style,
+                      fit: e.target.value as 'cover' | 'contain',
+                    };
+                  })
+                }
+              >
+                <option value="cover">Lấp đầy khung</option>
+                <option value="contain">Giữ trọn ảnh / video</option>
+              </select>
+            </label>
+          )}
           {item.type === 'text' && (
             <>
               <label>
@@ -129,7 +182,7 @@ export function Inspector({
               }
             />
           </label>
-          {item.type === 'audio' && (
+          {['audio', 'video'].includes(item.type) && (
             <>
               <label>
                 Cắt từ nguồn (giây)
@@ -148,24 +201,29 @@ export function Inspector({
                   }
                 />
               </label>
-              <label>
-                Âm lượng
-                <input
-                  aria-label="Âm lượng"
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.05"
-                  value={item.volume}
-                  onChange={(e) =>
-                    edit((i) => {
-                      i.volume = Number(e.target.value);
-                    })
-                  }
-                />
-              </label>
+              {item.type === 'audio' && (
+                <label>
+                  Âm lượng
+                  <input
+                    aria-label="Âm lượng"
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.05"
+                    value={item.volume}
+                    onChange={(e) =>
+                      edit((i) => {
+                        i.volume = Number(e.target.value);
+                      })
+                    }
+                  />
+                </label>
+              )}
             </>
           )}
+          <button className="remove-clip" onClick={remove}>
+            Gỡ clip khỏi project
+          </button>
         </>
       ) : (
         <p className="muted">Chọn clip trên timeline để chỉnh sửa.</p>

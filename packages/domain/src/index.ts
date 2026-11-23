@@ -8,6 +8,13 @@ import type { TemplateDefinition } from './generated-template';
 import type { JobState } from './generated-job';
 export type { ProjectContent };
 export type { TemplateDefinition, JobState };
+export {
+  appendMedia,
+  reorderClip,
+  removeClip,
+  validateMediaWindows,
+  type MediaInfo,
+} from './editing';
 export type TimelineItem = ProjectContent['items'][number];
 export const TICKS = 48000;
 const validator = new Ajv2020({ allErrors: true, strict: false }).compile(

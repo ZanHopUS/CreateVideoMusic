@@ -1,4 +1,42 @@
 @import 'tailwindcss';
+.asset-caption {
+  color: var(--muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.clip-actions {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+.clip-actions button {
+  flex: 1;
+  font-size: 11px;
+  padding: 8px;
+}
+.edit-hint {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.inspector select {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px;
+  background: #1d212d;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.remove-clip {
+  width: 100%;
+  font-size: 11px;
+  margin-top: 8px;
+  color: #e7b7bc;
+}
 :root {
   color-scheme: dark;
   --bg: #0e1017;
@@ -563,4 +601,31 @@ footer {
   .dashboard {
     padding: 40px 24px;
   }
+}
+.drive-panel {
+  padding: 12px 24px;
+  border-bottom: 1px solid #303044;
+}
+.drive-settings {
+  display: grid;
+  gap: 12px;
+  max-width: 840px;
+  padding: 16px 0;
+  font-size: 14px;
+}
+.drive-settings label:not(.rights) {
+  display: grid;
+  gap: 6px;
+}
+.drive-settings input:not([type='checkbox']) {
+  padding: 10px;
+  background: #171722;
+  color: inherit;
+  border: 1px solid #45455d;
+  border-radius: 6px;
+}
+.drive-settings p,
+.drive-settings small {
+  line-height: 1.6;
+  color: #b8b8cb;
 }

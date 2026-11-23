@@ -1,7 +1,7 @@
 # AI Music Video Studio
 
 Studio video âm nhạc local trên Windows 11, giao diện tiếng Việt. Kiến trúc đã được
-duyệt; hiện có **bản nội bộ TPL-01**: nhập ảnh/nhạc → caption/timeline → preview →
+duyệt; hiện có **bản nội bộ TPL-01**: nhập nhiều ảnh/video/nhạc → caption/timeline → preview →
 lưu/mở project → xuất MP4 thật. Chưa hoàn tất MVP Core; Lyrics AI, Music Card và
 các chức năng S2–S6 vẫn đang phát triển.
 
@@ -21,21 +21,33 @@ máy có nhiều bản. `./scripts/setup.ps1 -CheckOnly` kiểm versions mà kh�
 
 Máy hiện tại đã được setup. Launcher tự chọn ports trên `127.0.0.1`, mở browser
 với session tạm, không in/lưu token. Giữ terminal chạy; **Ctrl+C** để dừng UI/API
-và owned children. Chỉ chạy một launcher cho workspace. Session ở memory; nếu
-reload/mất session, dừng launcher rồi chạy lại để mở tab mới.
+và owned children. Launcher dùng Windows Job Object để API/Next không tồn tại
+khi launcher đóng đột ngột; mutex chặn mở hai phiên cùng workspace. Session ở
+memory; nếu reload/mất session, mở phiên mới bằng `./scripts/start.ps1 -Restart`.
+`./scripts/stop.ps1` dừng đúng launcher theo PID/create-time/cwd đã xác minh;
+không dừng browser hay ứng dụng khác, không xóa dữ liệu project.
 
 ## Thử luồng đầu tiên
 
-1. Chọn **Tạo video mới**. Xác nhận quyền dùng media, thêm PNG/JPEG và WAV PCM16,
-   MP3 hoặc M4A AAC. Bản này dùng một ảnh và một track nhạc.
+1. Chọn **Tạo video mới**. Xác nhận quyền dùng media, chọn nhiều PNG/JPEG, MP4
+   H.264 và WAV PCM16/MP3/M4A AAC trong một lần nhập. Batch đầu chia thời lượng
+   hình ảnh/video theo project và giới hạn nguồn; nhập thêm nối clip, không thay
+   clip đã chỉnh, tự tăng độ dài khi cần (tối đa 300s).
 2. Chỉnh caption, vị trí/thời lượng clip, đoạn nguồn nhạc, âm lượng; Undo/Redo và
-   preview. Project tối đa 300s, nhưng ứng dụng mới E2E với fixture 2s.
+   preview. Video nền tắt âm thanh gốc, dùng các clip nhạc riêng. Chọn clip để
+   đổi fit, trim, xếp trước/sau hoặc gỡ; đổi thứ tự xếp liền các clip trong track,
+   giữ source cuts. Gỡ clip không xóa file trong thư viện; Undo/Redo khôi phục được.
+   Project tối đa 300s, nhưng app mới E2E với fixtures 2–3s.
 3. **Lưu project** mở native folder picker. Checkpoint JSON phụ thuộc thư viện
    media local; **chưa là portable package**, không chuyển máy bằng JSON riêng.
 4. **Xuất video** chọn folder xuất. Preset hiện có: **720×1280, 30FPS, H.264/AAC**.
    Job chờ 10 mẫu RAM trống ≥4 GiB trước khi chạy; có progress/hủy/thử lại.
 
-SQLite/media/job temp ở `.local/workspace/`, không đưa vào Git/Drive. Working
+SQLite/media/job temp ở `.local/workspace/`, không đưa vào Git. SQLite/temp không
+upload lên Drive; media/project/MP4 có thể sao lưu qua mục **Kho Google Drive**.
+Xem [thiết lập Drive trực tiếp](docs/planning/DIRECT_DRIVE_SETUP.md): cần OAuth
+client riêng, chưa kiểm chứng cloud thật và chưa tự đồng bộ/restore.
+Working
 state lưu nền không thay thế manual save; dirty indicator vẫn báo chưa lưu thủ
 công. TPL-02/03, recovery UI, portable/Drive, AI và presets khác chưa được công bố
 hoàn tất. Dữ liệu/media cá nhân chỉ dùng khi có quyền sử dụng.
@@ -67,4 +79,5 @@ không được import vào ứng dụng.
 
 [MVP start/architecture](docs/MVP_START_HERE.md) ·
 [Trạng thái triển khai](docs/planning/MVP_IMPLEMENTATION_STATUS.md) ·
+[S2 nhiều media](docs/planning/S2_MEDIA_EDITOR_RESULTS.md) ·
 [Kết quả PoC](docs/technical-discovery/POC_STATUS.md).

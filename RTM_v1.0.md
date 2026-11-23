@@ -7,7 +7,7 @@ Mỗi FR liên kết tới test/AC trong SRS. Các phần chưa làm giữ **Not
 |---|---|---|---|---|---|
 | FR-101 | Xem/chọn ba nhóm template TPL-01/02/03; workflow template-first | C | AC-01 / E2E-01 | Partial — TPL-01 UI; TPL-02/03 pending | Slice tested; full AC pending |
 | FR-102 | Tạo project từ template và mở editor bản nháp | C | AC-01 / E2E-01 | Partial — TPL-01 editable draft | Slice tested; full AC pending |
-| FR-103 | Nhập nhiều ảnh/video, sắp xếp thứ tự và thời lượng | C | AC-02 / E2E-02 | Partial — Một ảnh/nhạc; nhiều media pending | Slice tested; full AC pending |
+| FR-103 | Nhập nhiều ảnh/video, sắp xếp thứ tự và thời lượng | C | AC-02 / E2E-02 | Partial — TPL-01 nhiều ảnh/video, import/reorder/trim | S2 slice tested; full AC pending |
 | FR-104 | Caption thủ công, chỉnh sửa và gợi ý AI nếu cấu hình | C | AC-03 / IT-03 | Partial — Caption nhập tay; AI pending | Slice tested; full AC pending |
 | FR-105 | Thư viện nhạc cá nhân, chọn thủ công hoặc gợi ý từ nội dung có sẵn | C(P gợi ý) | AC-04 / IT-04 | Not implemented | Not run |
 | FR-106 | Video draft giữ layer chỉnh sửa, không chỉ xuất video phẳng | C | AC-05 / E2E-01 | Partial — TPL-01 layers giữ khi save/open | Slice tested; full AC pending |
@@ -22,13 +22,13 @@ Mỗi FR liên kết tới test/AC trong SRS. Các phần chưa làm giữ **Not
 | FR-206 | Đề xuất nhiều đoạn nhạc và nghe thử; luôn cho trim thủ công | C(P) | AC-13 / IT-13 | Not implemented | Not run |
 | FR-207 | Text/lyrics nhiều font dấu Việt, màu, viền, shadow, position, animation | C cơ bản; M phong phú | AC-14 / IT-14 | Partial — Caption size/color; lyric styles pending | Slice tested; full AC pending |
 | FR-208 | Gợi ý style lyrics theo mood/template và cho user override | M(P) | AC-15 / IT-15 | Not implemented | Not run |
-| FR-301 | Editor multi-track media, audio, lyrics, caption/text; playhead và seek | C | AC-16 / E2E-16 | Partial — Image/music/text tracks; lyrics pending | Slice tested; full AC pending |
-| FR-302 | Kéo thả/trim/đổi duration; undo/redo; lưu trạng thái | C | AC-17 / IT-17 | Partial — Trim/duration/Undo/Redo subset | Slice tested; full AC pending |
+| FR-301 | Editor multi-track media, audio, lyrics, caption/text; playhead và seek | C | AC-16 / E2E-16 | Partial — Nhiều image/video/music/text clips; lyrics pending | S2 slice tested; full AC pending |
+| FR-302 | Kéo thả/trim/đổi duration; undo/redo; lưu trạng thái | C | AC-17 / IT-17 | Partial — Per-clip trim/reorder/remove/Undo/Redo | S2 slice tested; full AC pending |
 | FR-303 | Split, duplicate, snapping, lock/hide track | M | AC-18 / IT-18 | Not implemented | Not run |
-| FR-304 | Crop/fit/blur, brightness cơ bản; zoom/pan/rotate/filter nâng cao | C/M | AC-19 / IT-19 | Not implemented | Not run |
+| FR-304 | Crop/fit/blur, brightness cơ bản; zoom/pan/rotate/filter nâng cao | C/M | AC-19 / IT-19 | Partial — Cover/contain; crop/blur/brightness pending | S2 fit/persistence tested; full AC pending |
 | FR-305 | Hiệu ứng fade/slide/scale trong Core; presets mở rộng ở M | C/M | AC-20 / IT-20 | Not implemented | Not run |
 | FR-306 | Music Card: cover, song/artist, progress; chỉnh layout/color nâng cao | C/M | AC-21 / E2E-21 | Not implemented | Not run |
-| FR-307 | Preview và export dùng một timeline canonical, thống nhất z-order và timing | C | AC-22 / IT-22 | Partial — Shared TPL-01 scene; full fidelity pending | Slice tested; full AC pending |
+| FR-307 | Preview và export dùng một timeline canonical, thống nhất z-order và timing | C | AC-22 / IT-22 | Partial — Shared TPL-01 image/video scene; full fidelity pending | Sparse CFR source/order checks; full AC pending |
 | FR-401 | Tạo/đổi tên/mở/xóa project, chọn folder lưu, lưu thủ công | C | AC-23 / E2E-23 | Partial — Create/rename/save/open; delete UI pending | Slice tested; full AC pending |
 | FR-402 | Khôi phục timeline, lyrics, effects, template và references khi mở lại | C | AC-24 / E2E-24 | Partial — TPL-01 content/playhead; full state pending | Slice tested; full AC pending |
 | FR-403 | Báo dirty-state, cảnh báo rời project khi chưa lưu | C | AC-25 / IT-25 | Partial — Dirty hash/warnings; full acceptance pending | Slice tested; full AC pending |

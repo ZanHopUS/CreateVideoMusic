@@ -3,6 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "services/local-api"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
-from test_assets import prepare
+from test_assets import prepare, prepare_video
 
 prepare()
+prepare_video()
