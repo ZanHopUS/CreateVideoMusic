@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 import wave
 
@@ -46,8 +47,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--template', choices=['TPL01', 'TPL02', 'TPL03'], default='TPL03')
     parser.add_argument('--ratio', choices=['9-16', '16-9', '1-1'], default='9-16')
+    parser.add_argument('--run-id', default='')
     args = parser.parse_args()
-    directory = ROOT / '.poc/evidence/poc-04' / f'{args.template.lower()}-{args.ratio}-300s-1080p60'
+    if args.run_id and not re.fullmatch(r'[a-z0-9-]+', args.run_id): parser.error('Invalid run ID')
+    suffix = f'-{args.run_id}' if args.run_id else ''
+    directory = ROOT / '.poc/evidence/poc-04' / f'{args.template.lower()}-{args.ratio}-300s-1080p60{suffix}'
     config = json.loads((directory / 'run-config.json').read_text(encoding='utf-8'))
     settings = config['settings']
     verified_sources = {}

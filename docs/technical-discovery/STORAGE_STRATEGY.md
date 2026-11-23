@@ -105,3 +105,6 @@ Schema/container/driver vẫn Proposed; không biến ZIP fixture thành quyết
 production. Power loss, Drive sync và local service security chưa được kiểm.
 Render từ package đạt chức năng nhưng **R0 RAM chưa đạt**, một retry bị monitor
 dừng; chưa đóng toàn bộ gate storage/render hoặc FR-401–407.
+
+[Resource admission follow-up](RENDER_RESOURCE_ADMISSION_RESULTS.md) sau đó đạt
+R0 sampled + chức năng trong một lượt 2×12s; chưa thay kết luận về toàn bộ gate.

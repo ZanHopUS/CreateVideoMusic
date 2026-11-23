@@ -7,6 +7,14 @@ schema/container/retention trong harness vẫn Proposed**, không phải ADR Acc
 
 ## Kết luận theo phạm vi
 
+Follow-up sau báo cáo này: [resource admission](RENDER_RESOURCE_ADMISSION_RESULTS.md)
+đạt chức năng + R0 sampled trong một lượt bridge 2×12s mới. Các lượt fail dưới đây
+giữ nguyên theo điều kiện đo; chưa kết luận toàn bộ storage/render được nghiệm thu.
+
+[Windows junction follow-up](WINDOWS_PATH_SAFETY_RESULTS.md) sau đó kiểm 10 escape
+cases với 3 junction thật, đều bị chặn. TOCTOU và local service security vẫn mở;
+phần “chưa thử junction thực” phía dưới mô tả trạng thái tại lượt storage ban đầu.
+
 State/storage chức năng đạt các phép thử local: sáu fixtures 12/100 items,
 **24 process-crash runs ở 12 ranh giới**, **10 portable round trips**, recovery,
 shared/pinned assets, checksum/relink và malformed packages. Lượt lặp trên thư mục

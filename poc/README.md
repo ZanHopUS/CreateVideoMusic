@@ -2,7 +2,8 @@
 
 State/Undo/Redo, template reuse và SQLite/manual/recovery/portable local:
 [state-storage/README.md](state-storage/README.md). Có functional evidence; render
-restore R0 RAM chưa đạt, đọc giới hạn trước chạy lại.
+restore từng fail R0 RAM, một lượt admission follow-up đã đạt sampled R0.
+Đọc giới hạn trước chạy lại.
 
 Forced alignment CPU và loader Việt: [poc/alignment/README.md](alignment/README.md).
 

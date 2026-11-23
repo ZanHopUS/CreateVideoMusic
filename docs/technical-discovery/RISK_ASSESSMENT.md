@@ -106,6 +106,10 @@ power loss. Drive vẫn Not run. Rủi ro tài nguyên còn mở: render restore
 2 min available 1.850 GiB; concurrency 1 bị dừng ở 1.651 GiB. Không dùng functional
 pass thay cho R0, không tự tăng yêu cầu máy.
 
+Follow-up [resource admission](RENDER_RESOURCE_ADMISSION_RESULTS.md) có một lượt
+12s đạt chức năng và R0 sampled sau preflight ổn định ≥4 GiB; không đóng rủi ro
+300s/editor contention hoặc thay bằng chứng fail trên.
+
 Không chạy PoC trước TD-01/02 và các approval liên quan. Khi đã được phép thử: dừng run nếu thiếu quyền dùng dữ liệu, có outbound trái consent, có chi phí không được duyệt, mất dữ liệu hoặc vượt resource safety gate. Dùng bản sao disposable cho fault tests; không tác động manual project thật.
 
 No-Go là kết luận về **candidate/configuration**, không tự giảm yêu cầu sản phẩm. Word alignment fail chỉ mở đường Conditional Go sentence mode khi câu đạt và PO chấp nhận; local ASR fail không biến manual-only thành Core hoàn thành. Rendering fail không cho bỏ một preset E. Storage mất dữ liệu chặn chọn phương án, không coi khả năng “retry được” là đủ.

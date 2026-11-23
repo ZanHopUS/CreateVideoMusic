@@ -22,9 +22,12 @@ assert(template === 'TPL03' || ratio === '9-16', 'Planned TPL01/02 stress uses p
 const sizes = {'9-16': [1080, 1920], '16-9': [1920, 1080], '1-1': [1080, 1080]};
 const [width, height] = sizes[ratio];
 const settings = {template, width, height, fps: 60, seconds: 300};
-const output = path.join(local, 'evidence/poc-04', `${template.toLowerCase()}-${ratio}-300s-1080p60`);
+const runIndex = process.argv.indexOf('--run-id');
+const runId = runIndex < 0 ? '' : process.argv[runIndex + 1];
+assert(runIndex < 0 || (typeof runId === 'string' && /^[a-z0-9-]+$/.test(runId)), 'Invalid run ID');
+const output = path.join(local, 'evidence/poc-04', `${template.toLowerCase()}-${ratio}-300s-1080p60${runId ? `-${runId}` : ''}`);
 await mkdir(output, {recursive: true});
-for (const filename of ['raw.mp4', 'bounded.mp4']) {
+for (const filename of ['raw.mp4', 'bounded.mp4', 'run-config.json', 'error.json']) {
   try {await access(path.join(output, filename)); throw new Error(`Output exists: ${filename}`);}
   catch (error) {if (error.code !== 'ENOENT') throw error;}
 }
@@ -40,14 +43,15 @@ for (const file of sourceFiles) {
   await mkdir(path.dirname(snapshot), {recursive: true});
   await writeFile(snapshot, data);
 }
-await writeFile(path.join(output, 'run-config.json'), JSON.stringify({settings, ratio,
+await writeFile(path.join(output, 'run-config.json'), JSON.stringify({settings, ratio, runId,
   concurrency: 2, offthreadVideoThreads: 1, offthreadVideoCacheMiB: 64,
   x264Preset: 'ultrafast', hardwareAcceleration: 'disable', inventory}, null, 2));
 try {
   const browser = await ensureBrowser();
   await writeFile(path.join(output, 'browser.json'), JSON.stringify(browser, null, 2));
   const serveUrl = await bundle({entryPoint: path.join(here, 'stress-fixture.jsx'),
-    publicDir: path.join(local, 'render/stress-public'), outDir: path.join(local, 'render/stress-bundle')});
+    publicDir: path.join(local, 'render/stress-public'),
+    outDir: runId ? path.join(output, 'bundle') : path.join(local, 'render/stress-bundle')});
   const composition = await selectComposition({serveUrl, id: `${template}Stress`, inputProps: settings});
   let previous = 0, reported = -1;
   const began = performance.now();
