@@ -2,11 +2,13 @@
 
 **Dự án:** AI Music Video Studio (Hòa Âm)
 
-**Trạng thái:** Proposed — chưa chốt wireframe, chưa cho phép triển khai
+**Trạng thái:** Approved for Design về MR-01/MR-02 và hướng template-first; wireframe pixel vẫn Proposed, implementation chưa nghiệm thu
 
 **Ngày khảo sát:** 24/11/2026 (Asia/Saigon)
 
 **Mã khảo sát:** `dev` tại `ba60ab0`
+
+**Master v2.1:** [MR-01…MR-04](UI_MASTER_SPEC.md) đã được PO phê duyệt cho triển khai liên tục R1–R6. Dashboard gồm CTA gọn → ba template thật → dự án gần đây; điều hướng chính là Tổng quan / Dự án / Lưu trữ / Cài đặt. Project Management là workspace riêng.
 
 **Liên quan:** [UI-02](UI_02_VIDEO_EDITOR.md), [Gap Analysis](UI_GAP_ANALYSIS.md), [Kế hoạch R0–R6](UI_REDESIGN_PLAN.md).
 

@@ -20,10 +20,10 @@
 
 Trước khi triển khai, phải đọc tài liệu có liên quan:
 
-- `docs/requirements/PRD_v1.0.md`
-- `docs/requirements/SRS_v1.0.md`
-- `docs/requirements/RTM_v1.0.md`
-- `docs/decisions/OPEN_QUESTIONS.md`
+- `PRD_v1.0.md`
+- `SRS_v1.0.md`
+- `RTM_v1.0.md`
+- `OPEN_QUESTIONS.md`
 
 Thứ tự xử lý thông tin:
 

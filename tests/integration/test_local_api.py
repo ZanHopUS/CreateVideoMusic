@@ -58,6 +58,26 @@ def test_request_auth_origin_and_no_path_leak(server):
     assert response.status_code == 422 and "Windows" not in response.text
 
 
+def test_ui_state_recent_preferences_survive_restart_without_project_mutation(server, project):
+    app, client = server
+    created = app.state.store.create(project)
+    url = f"/api/v1/projects/{project['id']}/opened"
+    assert client.get("/api/v1/ui-state", headers=HEADERS).json()["recent"] == []
+    assert client.get(f"/api/v1/projects/{project['id']}", headers=HEADERS).status_code == 200
+    assert client.get("/api/v1/ui-state", headers=HEADERS).json()["recent"] == []
+    assert client.post(url, headers=HEADERS, json={}).status_code == 200
+    assert client.patch("/api/v1/ui-state", headers=HEADERS, json={"key": "timelineHeight", "value": 320}).status_code == 200
+    assert client.patch("/api/v1/ui-state", headers=HEADERS, json={"key": "projectViewMode", "value": "list"}).status_code == 200
+    assert client.patch("/api/v1/ui-state", headers=HEADERS, json={"key": "timelineHeight", "value": 20}).status_code == 422
+    state = client.get("/api/v1/ui-state", headers=HEADERS).json()
+    assert state["preferences"] == {"timelineHeight": 320, "projectViewMode": "list"}
+    assert [item["id"] for item in state["recent"]] == [project["id"]]
+    assert app.state.store.load(project["id"])["revision"] == created["revision"]
+    assert app.state.store.load(project["id"])["contentHash"] == created["contentHash"]
+    from amvs.ui_state import UIState
+    assert UIState(app.state.store).status()["preferences"] == state["preferences"]
+
+
 def test_json_budget_rejects_before_persistence(server):
     app, client = server
     response = client.post(

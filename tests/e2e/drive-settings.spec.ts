@@ -7,6 +7,8 @@ test('Drive: cấu hình và hủy OAuth local, chưa truy cập Google thật',
 }) => {
   const token = 'e2e-disposable-session-' + 'x'.repeat(48);
   await page.goto('/');
+  await page.getByRole('button', { name: 'Lưu trữ', exact: true }).click();
+  await page.getByRole('tab', { name: 'Cấu hình' }).click();
   const toggle = page.getByRole('button', { name: /Kho Google Drive/ });
   await expect(toggle).toBeEnabled();
   await toggle.click();

@@ -8,6 +8,14 @@ import {
   type ProjectContent,
 } from '@amvs/domain';
 import { Api, type Asset, type Job } from '../lib/api';
+export type LyricsWorkspaceDraft = {
+  audioId: string;
+  lines: LyricLine[];
+  input: string;
+  format: 'lrc' | 'srt';
+  language: string;
+  model: string;
+};
 export function LyricsPanel({
   project,
   assets,
@@ -16,6 +24,8 @@ export function LyricsPanel({
   prepare,
   expanded,
   toggle,
+  initialDraft,
+  onDraftChange,
 }: {
   project: ProjectContent;
   assets: Asset[];
@@ -24,19 +34,28 @@ export function LyricsPanel({
   prepare: () => Promise<void>;
   expanded: boolean;
   toggle: (value: boolean) => void;
+  initialDraft?: LyricsWorkspaceDraft;
+  onDraftChange: (draft: LyricsWorkspaceDraft) => void;
 }) {
   const music = project.items.filter((i) => i.type === 'audio');
-  const [audioId, setAudioId] = useState(music[0]?.id ?? '');
-  const [lines, setLines] = useState<LyricLine[]>(
-    structuredClone(project.lyrics),
+  const [audioId, setAudioId] = useState(
+    initialDraft?.audioId ?? music[0]?.id ?? '',
   );
-  const [input, setInput] = useState(''),
-    [format, setFormat] = useState<'lrc' | 'srt'>('lrc');
+  const [lines, setLines] = useState<LyricLine[]>(
+    structuredClone(initialDraft?.lines ?? project.lyrics),
+  );
+  const [input, setInput] = useState(initialDraft?.input ?? ''),
+    [format, setFormat] = useState<'lrc' | 'srt'>(
+      initialDraft?.format ?? 'lrc',
+    );
   const [message, setMessage] = useState(
     'Nhập/import lời theo thời gian bài hát nguồn, sửa rồi duyệt trước khi áp dụng.',
   );
-  const [language, setLanguage] = useState('vi'),
-    [model, setModel] = useState('small');
+  const [language, setLanguage] = useState(initialDraft?.language ?? 'vi'),
+    [model, setModel] = useState(initialDraft?.model ?? 'small');
+  useEffect(() => {
+    onDraftChange({ audioId, lines, input, format, language, model });
+  }, [audioId, lines, input, format, language, model, onDraftChange]);
   const [job, setJob] = useState<Job | null>(null);
   const savedLyrics = useRef(JSON.stringify(project.lyrics));
   useEffect(() => {

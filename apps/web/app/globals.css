@@ -714,3 +714,489 @@ footer {
   font-size: 10px;
   margin: 0 2px 0 0;
 }
+
+/* UI chrome v1 — scoped away from Remotion composition. */
+:root {
+  --surface-0: #0b1017;
+  --surface-1: #131b27;
+  --surface-2: #1e2838;
+  --border-control: #596279;
+  --lavender: #a9a0d6;
+  --danger: #db969e;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --radius: 0;
+  --accent: var(--lavender);
+  --bg: var(--surface-0);
+  --panel: var(--surface-1);
+  --line: #394255;
+}
+.studio-shell button,
+.studio-shell input,
+.studio-shell select,
+.studio-shell textarea,
+.studio-shell .template-card,
+.studio-shell .clip,
+.studio-shell .track-items,
+.studio-shell .upload-button {
+  border-radius: 0;
+}
+.studio-shell button:focus-visible,
+.studio-shell input:focus-visible,
+.studio-shell select:focus-visible,
+.studio-shell a:focus-visible,
+.studio-shell [role='separator']:focus-visible {
+  outline: 2px solid var(--lavender);
+  outline-offset: 2px;
+}
+.studio-shell [hidden] {
+  display: none !important;
+}
+.studio-shell main {
+  min-height: 100dvh;
+  min-width: 0;
+}
+.studio-shell .navigation {
+  width: 208px;
+  padding: 20px 12px;
+  gap: 4px;
+}
+.studio-shell .brand {
+  font-size: 22px;
+  margin: 0 8px 30px;
+}
+.studio-shell .topbar {
+  height: 56px;
+  padding: 0 24px;
+}
+.studio-shell .dashboard {
+  padding: 24px;
+  max-width: 1320px;
+}
+.studio-shell .dashboard h1 {
+  font-size: clamp(30px, 3vw, 42px);
+  margin: 8px 0;
+}
+.studio-shell .dashboard .template-grid {
+  margin: 24px 0;
+  gap: 12px;
+}
+.studio-shell .dashboard .artwork {
+  height: 150px;
+  background: #252d3d;
+}
+.studio-shell .dashboard .artwork.second {
+  background: #302b40;
+}
+.studio-shell .dashboard .artwork.third {
+  background: #253639;
+}
+.studio-shell .dashboard .template-card {
+  border-color: var(--line);
+}
+.studio-shell .editor-workspace {
+  height: calc(100dvh - 56px);
+  overflow: hidden;
+}
+.studio-shell:has(.editor-workspace:not([hidden])) {
+  height: 100dvh;
+  overflow: hidden;
+}
+body:has(.editor-workspace:not([hidden])) {
+  overflow: hidden;
+}
+.studio-shell .editor-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 290px) minmax(0, 1fr) minmax(
+      240px,
+      290px
+    );
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 0;
+}
+.studio-shell .editor-tools {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 0;
+  overflow: auto;
+  border-right: 1px solid var(--line);
+}
+.studio-shell .editor-main {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+.studio-shell .preview-stage {
+  height: auto;
+  min-height: 0;
+  flex: 1;
+  background: #151c28;
+  padding: 12px;
+}
+.studio-shell .inspector {
+  grid-column: 3;
+  grid-row: 1;
+  min-height: 0;
+  overflow: auto;
+  border-left: 1px solid var(--line);
+}
+.studio-shell .timeline-dock {
+  grid-column: 1/-1;
+  grid-row: 2;
+  min-height: 180px;
+  max-height: 55dvh;
+  position: relative;
+  border-top: 1px solid var(--line);
+  overflow: auto;
+}
+.studio-shell .timeline-resize {
+  height: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface-2);
+  cursor: ns-resize;
+}
+.studio-shell .timeline-reset {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 6;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+.studio-shell .timeline {
+  min-width: 650px;
+  padding: 18px 24px;
+}
+.studio-shell .projects-workspace,
+.studio-shell .settings-workspace,
+.studio-shell .storage-workspace {
+  padding: 24px;
+  max-height: calc(100dvh - 56px);
+  overflow: auto;
+}
+.studio-shell .project-toolbar {
+  display: flex;
+  gap: 8px;
+  margin: 18px 0;
+}
+.studio-shell .project-toolbar input {
+  flex: 1;
+  min-width: 140px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-control);
+  padding: 10px;
+}
+.studio-shell .project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+.studio-shell .project-list {
+  display: grid;
+  gap: 8px;
+}
+.studio-shell .project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 12px;
+}
+.studio-shell .project-card strong {
+  overflow-wrap: anywhere;
+}
+.studio-shell .project-card-art {
+  height: 100px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  color: var(--lavender);
+}
+.studio-shell .project-list .project-card {
+  flex-direction: row;
+  align-items: center;
+}
+.studio-shell .project-list .project-card-art {
+  width: 44px;
+  height: 44px;
+  flex: none;
+}
+.studio-shell .project-list .project-card button {
+  margin-left: auto;
+}
+.studio-shell .settings-workspace {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+}
+.studio-shell .settings-workspace h1 {
+  grid-column: 1/-1;
+}
+.studio-shell .settings-workspace nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.studio-shell .settings-workspace nav a {
+  padding: 10px;
+  background: var(--panel);
+}
+.studio-shell .settings-content {
+  background: var(--panel);
+  padding: 16px;
+  max-height: 70dvh;
+  overflow: auto;
+}
+.studio-shell .settings-content section {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.studio-shell .dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: #05070acb;
+}
+.studio-shell .export-dialog {
+  background: var(--panel);
+  border: 1px solid var(--border-control);
+  width: min(1000px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 16px;
+}
+.studio-shell .export-dialog header,
+.studio-shell .export-dialog footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.studio-shell .export-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 18px 0;
+}
+.studio-shell .export-columns > div {
+  background: var(--surface-2);
+  padding: 16px;
+  min-height: 200px;
+}
+@media (max-width: 1100px) {
+  .studio-shell .editor-layout {
+    grid-template-columns: 210px minmax(0, 1fr) 220px;
+  }
+  .studio-shell .navigation {
+    width: 170px;
+  }
+}
+@media (max-width: 850px) {
+  .studio-shell .editor-layout {
+    grid-template-columns: 170px minmax(0, 1fr) 180px;
+  }
+  .studio-shell .navigation {
+    width: 130px;
+  }
+  .studio-shell .editor-toolbar {
+    padding: 4px;
+  }
+  .studio-shell .settings-workspace {
+    grid-template-columns: 1fr;
+  }
+  .studio-shell .settings-workspace nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .studio-shell .settings-workspace h1 {
+    grid-column: 1;
+  }
+}
+
+.studio-shell .recent-projects {
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.studio-shell .workspace-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.studio-shell .recent-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.studio-shell .recent-grid button {
+  text-align: left;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.studio-shell .recent-grid small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.studio-shell .export-scene {
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #0b1017;
+}
+
+.studio-shell .settings-content label {
+  display: block;
+  margin: 12px 0;
+  color: var(--text);
+}
+.studio-shell .settings-content label input[type='number'] {
+  display: block;
+  width: min(280px, 100%);
+  margin-top: 6px;
+  padding: 8px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border-control);
+}
+.studio-shell .settings-content input[type='checkbox'] {
+  margin-right: 8px;
+  accent-color: var(--lavender);
+}
+.studio-shell .settings-content button {
+  margin: 4px 8px 4px 0;
+}
+.studio-shell .settings-savebar {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  margin: 14px 0;
+  padding: 10px 0;
+}
+.studio-shell .settings-workspace nav button[aria-current='page'] {
+  background: #353248;
+  color: var(--text);
+}
+.studio-shell .recovery-list {
+  display: grid;
+  gap: 8px;
+  max-height: 50dvh;
+  overflow: auto;
+  margin: 12px 0;
+}
+.studio-shell .recovery-list article {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 12px;
+}
+
+.studio-shell .preview-stage:fullscreen {
+  width: 100vw;
+  height: 100dvh;
+  background: #080b10;
+}
+.studio-shell .preview-controls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+}
+
+.studio-shell .project-toolbar {
+  flex-wrap: wrap;
+}
+.studio-shell .project-toolbar select {
+  margin-left: 6px;
+  padding: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-control);
+}
+.studio-shell .project-toolbar button[aria-pressed='true'] {
+  background: #353248;
+  border-color: var(--lavender);
+}
+
+.studio-shell .storage-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 16px 0;
+}
+.studio-shell .storage-tabs [aria-selected='true'] {
+  background: #353248;
+  border-color: var(--lavender);
+}
+.studio-shell .storage-workspace article {
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  margin: 6px 0;
+}
+.studio-shell .storage-workspace h1 {
+  font-size: 28px;
+}
+.studio-shell .storage-workspace section {
+  max-width: 980px;
+}
+
+.studio-shell .activity {
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  padding: 5px 16px;
+  max-height: 140px;
+  overflow: auto;
+}
+.studio-shell .activity summary {
+  cursor: pointer;
+}
+.studio-shell .activity ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+.studio-shell .activity li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 4px;
+}
+.studio-shell .activity button {
+  padding: 4px 8px;
+}
+
+.studio-shell main {
+  position: relative;
+}
+.studio-shell .activity {
+  position: absolute;
+  top: 56px;
+  right: 8px;
+  z-index: 30;
+  width: min(460px, calc(100% - 16px));
+  box-shadow: 0 8px 16px #0007;
+}
+.studio-shell .activity:not([open]) {
+  width: auto;
+}
