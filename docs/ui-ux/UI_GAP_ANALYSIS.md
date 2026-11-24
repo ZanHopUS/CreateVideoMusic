@@ -1,5 +1,7 @@
 # UI Gap Analysis — Dashboard & Professional Editor
 
+**Cập nhật implementation R0:** PO đã cho phép sửa riêng Editor Lease/read-only; đã triển khai, chạy regression và kiểm lại C06. Sẵn sàng review chức năng R0 lease với giới hạn timing/native picker; xem [kết quả triển khai và evidence](UI_R0_LEASE_FIX_RESULTS.md). Các mô tả “chưa sửa” bên dưới là baseline/chẩn đoán lịch sử; R1–R6 và UI redesign chưa triển khai.
+
 **Trạng thái:** khảo sát mã + đề xuất, chưa triển khai
 
 **Ngày:** 24/11/2026 (Asia/Saigon) · **Baseline:** `dev`, `ba60ab0`
@@ -8,7 +10,7 @@
 
 ## 1. Phương pháp và phạm vi
 
-Chỉ đọc repository và viết bốn tài liệu `docs/ui-ux/`. Không sửa application code, API, DB hoặc tests; không chạy application/browser test trong lượt khảo sát này. “Có trong mã” không đồng nghĩa đạt nghiệm thu. Các kết quả S6 ở [báo cáo cũ](../planning/S2_S6_RESULTS.md) là evidence lịch sử, không phải kết quả kiểm redesign hôm nay.
+Phần khảo sát ban đầu chỉ đọc repository và viết bốn tài liệu `docs/ui-ux/`, chưa chạy application/browser tests. **Cập nhật R0:** PO đã giao tái hiện và xác định nguyên nhân; browser diagnosis trên production/development và 3 integration tests đã chạy, kết quả ở [UI_R0_LEASE_DIAGNOSIS](UI_R0_LEASE_DIAGNOSIS.md). Application code/API/DB/lease vẫn không đổi. “Có trong mã” không đồng nghĩa đạt nghiệm thu. Các kết quả S6 ở [báo cáo cũ](../planning/S2_S6_RESULTS.md) là evidence lịch sử, không phải kết quả kiểm redesign hôm nay.
 
 Nguồn đã đối chiếu:
 
@@ -62,7 +64,7 @@ flowchart TD
 | Hòa Âm, dark-purple | Đã hỗ trợ trong code | `studio.tsx` brand, `globals.css` tokens accent/panel | Giữ nhận diện, chuẩn hóa tokens |
 | Creative Dashboard thay landing | Hỗ trợ một phần | Nhánh Dashboard còn hero/marketing text, không dashboard project content | Tách DashboardWorkspace |
 | Hero gọn, ba template vùng nhìn đầu | Hỗ trợ một phần; cần kiểm chứng trên trình duyệt | Ba CTA tạo draft thật; padding 70px, h1 tới 60px, template margin-top 50px | Wireframe ở hai viewport, đo bounds |
-| Recent projects | Hỗ trợ một phần | Sidebar có list; API `{id,name}` theo rowid, không last-opened | D-01: định nghĩa recent trước thiết kế chi tiết |
+| Recent projects | Hỗ trợ một phần | Sidebar có list; API `{id,name}` theo rowid, không last-opened | D-01 đã chốt xuyên phiên; thiết kế persistence ở R0/R1 |
 | Sidebar/điều hướng | Có dấu hiệu lỗi; hỗ trợ một phần | “Studio của tôi” không handler; brand anchor không có navigation action | Navigation qua controller/dirty guard |
 | Drive khỏi Dashboard chính | Chưa triển khai | DrivePanel render trước nhánh Dashboard | Entry Lưu trữ mở manager riêng |
 
@@ -75,7 +77,7 @@ flowchart TD
 | §3 no page scroll/independent panels | Hỗ trợ một phần; cần kiểm chứng trên trình duyệt | Chỉ lyrics/library có max-height overflow; không `100dvh` shell, min-height 0 chain | R3 |
 | §3 Preview/Timeline luôn hiện | Chưa triển khai theo yêu cầu mới | Tools và lyrics chèn giữa preview/timeline; dưới 850px Inspector xếp xuống dưới | R3 |
 | §4 Header/back/project/save | Hỗ trợ một phần | Save/export/dirty có; back Dashboard chưa có, undo ở editor toolbar, save pending/error chỉ message/busy chung | R1/R2/R3 |
-| §5 lease/read-only/takeover | Hỗ trợ một phần; có dấu hiệu lỗi; cần kiểm chứng trên trình duyệt | Có claim/5s heartbeat/30s expiry/release/takeover + revision. Chưa kết luận root cause; xem §4 | R0/R2 |
+| §5 lease/read-only/takeover | Hỗ trợ một phần; có dấu hiệu lỗi; cần kiểm chứng trên trình duyệt | Có claim/5s heartbeat/30s expiry/release/takeover + revision. R0 đã chứng minh race C03 và nhánh C04–C06; chưa sửa, xem báo cáo R0 | R0/R2 |
 | §6 năm tabs Left Panel | Chưa triển khai | Chưa có tool tabs; nhiều details trong main | R3/R4 |
 | §6.1 import/search/tag/reuse | Đã hỗ trợ trong code cho luồng hiện tại | Multiple upload + partial errors, library search/tag/reuse/audio listen; placement chưa đúng | R4 |
 | §6.1 type filter/format/video preview | Hỗ trợ một phần | Có kind/duration/mime trong asset DTO; chưa có filter/format label và video player trong library | R4 |
@@ -86,10 +88,10 @@ flowchart TD
 | §7 composition/ratio/Play-Pause | Đã hỗ trợ trong code cho nền hiện tại | Shared Player/Scene, dimensions/FPS theo project, Play/Pause thật | Giữ R3/R4 |
 | §7 preview controls/safe area | Hỗ trợ một phần | Seek ở ruler; thiếu scrubber/timecode/mute-volume/fullscreen riêng và safe-area overlay | R3/R4; fullscreen policy D-05 |
 | §8 contextual Inspector | Hỗ trợ một phần | Có type branches; project/preset/Music Card trộn chung; chưa clear selection dễ dùng | R4 |
-| §8 image/video transforms | Hỗ trợ một phần / capability chưa triển khai | fit/crop position/blur/brightness có; schema/scene không có arbitrary zoom/rotation/general transform/filter presets | R0 capability decision D-02; R4 chỉ field hiện hữu |
+| §8 image/video transforms | Hỗ trợ một phần / capability chưa triển khai | fit/crop position/blur/brightness có; schema/scene không có arbitrary zoom/rotation/general transform/filter presets | D-02: R4.A field hiện hữu, R4.B advanced sau review delta |
 | §8 audio/video speed | Hỗ trợ một phần | Rational `speed` và playbackRate renderer có; Inspector chưa có input speed. Audio volume=0 có thể mute; chưa toggle riêng | R4, giữ mapping/validation |
 | §8 Text/Lyrics typography | Hỗ trợ một phần | Fonts 2 loại, size/color/stroke/shadow/x/y/animation có; rotation chưa contract; highlightColor có schema/scene nhưng chưa control | R4 |
-| §8 Music Card | Hỗ trợ một phần | Metadata role/title/artist, cover theo ảnh thứ hai, typography có; layout/progress style là giá trị scene cố định | D-02; không dựng field giả |
+| §8 Music Card | Hỗ trợ một phần | Metadata role/title/artist, cover theo ảnh thứ hai, typography có; layout/progress style là giá trị scene cố định | D-02 giai đoạn B; không dựng field giả |
 | §8 numeric/slider/reset/disabled reason | Hỗ trợ một phần | Nhiều numeric, audio range, fieldset read-only; chưa paired controls/reset/reason nhất quán | R1/R4 |
 | §9 dock/resize | Chưa triển khai | Timeline trong document flow; chưa separator/resize/reset/persist size | R3 |
 | §9 select/reposition/seek/zoom/order/undo | Đã hỗ trợ trong code cho nền hiện tại | Pointer-up commit move, zoom 1–8, track order; trim ở Inspector | Giữ R3/R4, browser regression |
@@ -99,17 +101,17 @@ flowchart TD
 | §10 Styling/Draft-Reviewed-Applied | Hỗ trợ một phần | Style nằm Inspector, words highlight trong Scene; Applied suy ra lyric items, không enum trong schema | R4; không thêm enum persisted |
 | §11 Storage workspace | Chưa triển khai về layout; nền Drive đã có | OAuth/config/folder/backup/auto/restore/exports có trong panel inline | R5 |
 | §11 last backup/history | Hỗ trợ một phần | `lastBackup` có backend, chưa trong frontend DriveState; `GET drive/backups` có list, chưa manager history UI | R5, dùng field hiện hữu |
-| §11 progress/errors/cancel | Hỗ trợ một phần; thiếu capability | Backend message theo file/phase; không byte-% contract, không cancel backup/restore endpoint; async failure message gộp network/permission/quota | D-03, không tự đổi API |
+| §11 progress/errors/cancel | Hỗ trợ một phần; thiếu capability | Backend message theo file/phase; không byte-% contract, không cancel backup/restore endpoint; async failure message gộp network/permission/quota | D-03 đã chốt cần capability thật; thiết kế delta trước code |
 | §11 consent/safety | Đã hỗ trợ trong code cho các đường hiện tại; cần browser regression | Explicit backup consent, auto default off ở cấu hình mới; snapshot/checksum/no overwrite/no local delete | R5/R6 giữ đầy đủ |
 | §12 Export workspace | Chưa triển khai về layout; nghiệp vụ hỗ trợ một phần | Preset trong Inspector, toolbar gọi picker + jobs, kết quả cuối trang | R5 |
 | §12 resource preflight/wait/cancel/retry/output | Hỗ trợ một phần | Missing media endpoint; job admission/disk/validation ở backend. Chưa resource-preflight DTO riêng; không hứa trước queued là đủ RAM | R5, hiển thị status/message backend |
 | §13 global states | Hỗ trợ một phần | Inline status/alert + busy/dirty/missing/read-only; chưa state taxonomy/toast/retry/error boundaries thống nhất | R1/R2/R5 |
 | §14 UI-ED-01…15 | Cần kiểm chứng trên trình duyệt | Suite cũ có một phần flows; chưa assert geometry/resize/keyboard mới | R0 baseline và R6 |
-| §15–16 scope/governance | Đã xác định ràng buộc | Không đổi engine/schema/codec/API/DB, không mockup thay chức năng, chỉ tài liệu lúc này | Mọi R |
+| §15–16 scope/governance | Đã xác định ràng buộc | Không đổi code lúc này; delta cần thiết theo D-01…04 được thiết kế trước code, không mockup thay chức năng | Mọi R |
 
 ## 4. Lease: dữ kiện, giả thuyết và cách chứng minh
 
-**Chưa xác nhận nguyên nhân lỗi chỉ đọc/takeover của người dùng.** Các điểm sau là quan sát mã và kịch bản cần tái hiện, không phải chẩn đoán runtime đã hoàn tất.
+**Cập nhật R0:** đã xác nhận race response claim cũ ghi đè quyền sau takeover (3/3 production + 3/3 development với barrier và quan sát sau 6s), cùng các nhánh lỗi feedback/reload/heartbeat. Xem [báo cáo R0 và evidence](UI_R0_LEASE_DIAGNOSIS.md). Chưa quy kết mọi triệu chứng trong phiên người dùng trước đây cùng một nguyên nhân. Bảng dưới giữ danh sách giả thuyết khảo sát ban đầu; chỉ các case C03…C06 trong báo cáo được nâng thành đã tái hiện.
 
 | ID | Dữ kiện đọc được | Tác động có thể xảy ra / kiểm cần làm |
 |---|---|---|
@@ -125,14 +127,31 @@ flowchart TD
 
 Thu thập tối thiểu: dev/production, một/hai tab, TTL, suspended/resumed, đóng thường/kill owned test browser, reload launcher, 401/409/timeout, click takeover nhiều lần, request đảo thứ tự, dirty before takeover, Manual Save đang chờ worker. Không log token, OAuth JSON, media contents hay raw project text. Dùng disposable workspace, không tự kill launcher đang chứa dữ liệu người dùng.
 
-## 5. Capability/contract gaps cần quyết định
+## 5. Sổ quyết định D-01–D-06 — cập nhật PO 24/11/2026
 
-1. **D-01 Recent:** không có last-opened timestamp. Chọn semantics trong phiên hoặc duyệt yêu cầu dữ liệu riêng.
-2. **D-02 Inspector/Timeline advanced:** UI-02 được giữ nguyên; zoom/rotation/card layout/progress style không thể chỉ đổi CSS UI để xuất MP4 đúng. Không tự thêm schema/renderer. Cần PO quyết định task mở rộng riêng hoặc chấp nhận còn gap ở phạm vi redesign hiện tại. Không tự đánh mục này hoàn thành.
-3. **D-03 Drive:** không có structured async error categories/byte-progress/cancel transfer. UI chỉ được hiển thị dữ liệu thật đang có. Distinct quota vs permission và nút cancel transfer cần quyết định contract riêng; hủy OAuth hiện có không tương đương hủy upload.
-4. **D-04 UI persistence:** `view.panels` hiện boolean keys whitelist; schema content không có timelineHeight/activeTool/lyricsMode. Đề xuất giữ UI mới trong session memory trước; không lén đưa vào content/DB/localStorage. Nếu cần persistence qua restart, phải duyệt mapping/version tương thích.
-5. **D-05 Small viewport/fullscreen:** phải duyệt compact layout và ngoại lệ fullscreen do người dùng chủ động. Fullscreen một mình preview không đồng thời hiện timeline; không tự coi đó là đáp ứng literal “luôn hiển thị”.
-6. **D-06 Asset DTO:** MIME/kind/duration có trong `/assets`; Asset TS hiện không khai báo bytes/width/height dù server có thể trả. Nếu cần metadata thêm thì đọc field thực đã có, không phát minh endpoint. Về safe area, chỉ UI overlay, không tham gia composition/export.
+Các hàng dưới đây ghi quyết định mới của PO, không phải trạng thái đã triển khai. Phần khảo sát mã tại §2–4 vẫn phản ánh baseline `ba60ab0`. UI-01 vẫn Proposed; UI-02 nguyên văn vẫn Approved for Design — Not Implemented. Chưa có lệnh triển khai code hoặc commit/push trong cập nhật này.
+
+| ID | Vấn đề | Quyết định / định hướng | Trạng thái |
+|---|---|---|---|
+| D-01 | Dự án gần đây | Lưu lịch sử mở project xuyên phiên | PO đã chốt hướng |
+| D-02 | Inspector và Timeline nâng cao | Giữ đầy đủ yêu cầu; triển khai theo hai giai đoạn | PO đã chốt hướng; phân bổ chi tiết hai giai đoạn là đề xuất |
+| D-03 | Google Drive | Storage Manager hoàn chỉnh, bổ sung progress/error/cancel thật | PO đã chốt hướng |
+| D-04 | Ghi nhớ bố cục Editor | Lưu tùy chọn giao diện trên máy, độc lập dữ liệu project | PO đã chốt hướng |
+| D-05 | Màn hình nhỏ và fullscreen | Compact layout + chế độ fullscreen Preview riêng | PO đã chốt hướng |
+| D-06 | Asset DTO và Media Metadata | Chuẩn hóa Asset DTO và Media Metadata | Recommended Decision; chi tiết field/nullable/version chưa chốt |
+
+### Tác động tới kế hoạch
+
+- **D-01:** thay phương án recent chỉ trong memory bằng persistence local. Đề xuất lưu metadata theo workspace ngoài project content, không coi mỗi GET là một lần mở. Cần thiết kế ở R0, thực hiện ở R1 sau khi được phép triển khai; test xuyên browser/launcher restart và port thay đổi. Không suy thành lịch sử cloud/cross-PC.
+- **D-02:** đề xuất giai đoạn A là cấu trúc workspace và capabilities đã có; giai đoạn B bổ sung capabilities còn thiếu với schema/composition/backend thay đổi tối thiểu khi thực sự cần. Toàn bộ yêu cầu UI-02 giữ nguyên; phase A không được đánh dấu hoàn tất advanced hoặc full redesign. Split/duplicate/snapping/visibility vẫn theo điều kiện capability/task mở rộng trong đặc tả, không tự biến mọi tính năng Complete thành cam kết mới.
+- **D-03:** không dừng ở chuyển panel sang dialog. R5 phải có backend transfer progress thật, error categories an toàn và cancel upload/download thật; cancellation phải giữ local bytes, bản backup thành công trước đó, không publish manifest/output dang dở. Không nhầm hủy OAuth/đóng dialog/disconnect với hủy transfer. Contract thiết kế mới cần kiểm backward compatibility và được review trước code; không bịa % từ timer.
+- **D-04:** lưu preferences local tách content/DB project/manual snapshots/Drive backups. Đề xuất store có version, validated bounds/defaults/reset; scope dự kiến activeTool/lyricsMode/timelineHeight và trạng thái panel được duyệt, không lưu draft lyrics/token/credentials/lease. Localhost đổi port khiến browser localStorage đơn lẻ không đủ; storage mechanism và multi-tab conflict policy cần chốt ở R0. Thay UI preferences không làm project dirty/revision/history thay đổi.
+- **D-05:** normal desktop vẫn ba cột + preview/inspector/timeline đồng thời. Compact phải có lối vào controls đầy đủ; fullscreen Preview do user chủ động là mode riêng, tạm thay workspace thường, thoát thì phục hồi layout/playhead/selection/quyền hiện hành. Không coi compact là mobile Editor đầy đủ; breakpoints/kích thước phải kiểm trên browser.
+- **D-06 Recommended:** rà field thật tại API/probe/schema và gom Asset DTO frontend/backend thống nhất; phân biệt ảnh không có duration và metadata chưa biết, dùng ticks/bytes rõ ràng, không lộ path. Các field tối thiểu/candidate, compatibility và xử lý metadata cũ đề xuất trong kế hoạch. Không coi Recommended là quyền tự thêm field/đổi dữ liệu.
+
+### Ranh giới thay đổi
+
+Lượt này chỉ sửa tài liệu. Quyết định mới cho phép lập thiết kế các mở rộng có mục đích ở D-01…04, thay cho giả định cũ “chỉ frontend/giữ nguyên mọi contract”. Chưa thực hiện thay DB/API/schema/renderer. Kế hoạch thực thi và các delta kỹ thuật phải được review trước code; không lấy các quyết định này làm quyền viết lại AI Engine, đổi codec, cloud-first hoặc refactor toàn bộ backend. R0 đã xác nhận nguyên nhân cho các kịch bản trong [báo cáo lease](UI_R0_LEASE_DIAGNOSIS.md); chưa triển khai bản sửa.
 
 ## 6. Coverage hiện có và phần thiếu
 
@@ -146,7 +165,7 @@ Thu thập tối thiểu: dev/production, một/hai tab, TTL, suspended/resumed,
 | `test_drive`, launcher tests | Consent/OAuth/checksum/no overwrite/fault/owned tree | UI focus/semantics; không thay browser/cloud test |
 | Unit `domain/editing/music-card/lyrics` | Hash/schema/history, template independence/source mapping | Pure UI reducer/resize math nếu thêm sau duyệt |
 
-Playwright hiện mặc định 1440×1000, 1 worker; nhiều selector dựa `.navigation .current-project`, `.ruler`, `.clip`, labels/summary cũ. Các test này cần di chuyển entry/selector có chủ đích; giữ assertion nghiệp vụ, không xóa test để xanh. R0 ghi artifact baseline mới; R6 phải có 1366×768 và 1920×1080. Lượt khảo sát này **không chạy lại** các suite trên, không có pass mới cho UI-ED.
+Playwright hiện mặc định 1440×1000, 1 worker; nhiều selector dựa `.navigation .current-project`, `.ruler`, `.clip`, labels/summary cũ. Các test này cần di chuyển entry/selector có chủ đích; giữ assertion nghiệp vụ, không xóa test để xanh. R0 ghi artifact baseline mới; R6 phải có 1366×768 và 1920×1080. Lượt khảo sát ban đầu không chạy lại các suite. Lượt R0 hiện có browser diagnosis riêng và 3 integration tests thật; không chạy lại full regression và không coi tái hiện bug là pass UI-ED. Layout baseline đã đo và UI-ED-01/02 chưa đạt; root cause lease và giới hạn từng case ở báo cáo R0.
 
 ## 7. Lưu ý hồ sơ
 

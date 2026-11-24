@@ -25,7 +25,7 @@
 
 `apps/web/app/page.tsx` chỉ render `Studio`. Dashboard và Editor là hai nhánh JSX của `Studio`, phụ thuộc `project === null`; chưa có navigation state riêng. Hero lớn, CTA tạo mới và ba template đã có; project chỉ liệt kê trong sidebar. `DrivePanel` đặt trước cả hai nhánh. Nút “Studio của tôi” không có handler; brand `href="#"` không thực hiện chuyển Dashboard qua controller.
 
-`GET /projects` hiện chỉ trả `{id, name}`, sắp xếp `rowid DESC` theo lúc tạo bản ghi. Không có `lastOpenedAt`, `updatedAt`, ảnh preview project hay số clip trong response. Không gọi thứ tự này là thứ tự mở gần nhất; không hiển thị ngày sửa hoặc thumbnail project giả. Phần này cần quyết định D-01 trong kế hoạch.
+`GET /projects` hiện chỉ trả `{id, name}`, sắp xếp `rowid DESC` theo lúc tạo bản ghi. Không có `lastOpenedAt`, `updatedAt`, ảnh preview project hay số clip trong response. Không gọi thứ tự này là thứ tự mở gần nhất; không hiển thị ngày sửa hoặc thumbnail project giả. D-01 đã được PO chốt: lịch sử mở phải được lưu xuyên phiên; code hiện tại chưa đáp ứng.
 
 ## 3. Cấu trúc đề xuất để thảo luận
 
@@ -50,11 +50,15 @@
 - Card project sử dụng ID ổn định; hỗ trợ tên trùng, tên dài, mở và các thao tác hiện có qua controller. Không thêm clone/delete nâng cao ngoài phạm vi được duyệt.
 - Tên, giới hạn hàng card, icon, kích thước, mật độ và responsive breakpoint cần duyệt ở R0/R1.
 
-## 4. Project gần đây — giới hạn dữ liệu cần chốt
+## 4. Project gần đây — D-01 đã chốt
 
-Phương án không đổi API: ghi thứ tự các project người dùng đã mở trong phiên UI bằng memory, dùng `{id,name}` đã có. Gọi chính xác “Gần đây trong phiên này”; trước khi có lịch sử phiên, hiển thị “Project trên máy” theo thứ tự backend. Không tự ghi browser storage hoặc thêm trường vào project content.
+**Quyết định PO ngày 24/11/2026:** lưu lịch sử mở project xuyên phiên. Phương án chỉ giữ trong memory và nhãn “Gần đây trong phiên này” không còn là đích triển khai.
 
-Nếu PO muốn danh sách gần đây chính xác xuyên restart/máy hoặc thời điểm chỉnh sửa, cần yêu cầu dữ liệu mới được duyệt riêng. Không coi kế hoạch này đã cho phép đổi DB/API. Sau restore/import phải refresh danh sách; không giữ card chỉ tồn tại trong cache và không truy cập được.
+Thiết kế kỹ thuật đề xuất: lịch sử local theo workspace, tham chiếu project ID và thời điểm mở thành công, nằm ngoài project content/manual-save hash. Không lấy mọi GET/polling project làm lần mở. R0 cần chốt chính xác thời điểm ghi (ví dụ project đã load thành công), giới hạn lịch sử, xử lý project bị xóa/import/restore và đồng bộ nhiều tab. Chưa tự chọn số lượng entry hoặc thứ tự tie-break làm quyết định PO.
+
+Cần lớp lưu local xuyên restart và API metadata được thiết kế ở R0; không suy timestamps từ rowid hay sửa đổi giả. Cổng localhost của launcher thay đổi nên localStorage theo origin đơn lẻ không bảo đảm xuyên phiên; đề xuất metadata sidecar qua backend, không trộn vào bảng nội dung project. Đây là phương án kỹ thuật để review, chưa phải code hoặc contract đã ban hành. Không có yêu cầu tự đồng bộ lịch sử mở lên Drive hoặc sang máy khác.
+
+Sau restore/import phải refresh danh sách; project đã xóa hoặc không còn truy cập được không được giữ như card mở được. Ghi lịch sử không làm project dirty, không tăng content revision và không đổi lease ownership.
 
 ## 5. Trạng thái và điều hướng đề xuất
 
@@ -77,7 +81,7 @@ Nếu PO muốn danh sách gần đây chính xác xuyên restart/máy hoặc th
 | UI-DB-01 | Thương hiệu Hòa Âm/dark-purple; navigation có selected/focus/disabled rõ |
 | UI-DB-02 | Ở 1366×768 và 1920×1080, cả ba card template và tên/CTA của chúng nằm trong vùng nhìn đầu tiên, không cần page scroll |
 | UI-DB-03 | Cả ba template tạo draft thật bằng controller hiện có, không đổi template IDs/schema |
-| UI-DB-04 | Project list phản ánh dữ liệu thật, tên dài/trùng/empty/error được xử lý; định nghĩa “gần đây” đã được PO xác nhận |
+| UI-DB-04 | Project list phản ánh lịch sử mở thật xuyên reload, đóng/mở browser và restart launcher (kể cả đổi port); tên dài/trùng/empty/error được xử lý, không làm project dirty |
 | UI-DB-05 | Storage mở riêng, không có Drive form hoặc hàng Drive thường trực trong nội dung chính |
 | UI-DB-06 | Vào/ra Editor không làm mất draft, manual dirty semantics, session hoặc job |
 | UI-DB-07 | Keyboard tới được template/card/action; browser không có lỗi nghiêm trọng chưa xử lý |
@@ -86,4 +90,4 @@ Chưa chạy browser test cho thiết kế này. Kiểm hình học card dùng b
 
 ## 7. Phần cần duyệt trước triển khai
 
-Wireframe Desktop hai viewport; định nghĩa recent; nội dung navigation; vị trí entry vào Storage; mật độ project cards; cách quay lại Editor đang mở. Kết quả này chỉ là đầu vào R0/R1. UI-01 vẫn **Proposed**, không chuyển trạng thái chỉ vì UI-02 đã được duyệt thiết kế.
+D-01 đã chốt lịch sử mở xuyên phiên; wireframe Desktop hai viewport, chi tiết persistence/history, nội dung navigation, vị trí entry vào Storage; mật độ project cards; cách quay lại Editor đang mở. Kết quả này chỉ là đầu vào R0/R1. UI-01 vẫn **Proposed**, không chuyển trạng thái chỉ vì UI-02 đã được duyệt thiết kế.
