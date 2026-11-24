@@ -2,22 +2,24 @@
 
 **Ngày:** 24/11/2026 (Asia/Saigon) · **Baseline code:** `dev`, `d12015a`.
 
-**Trạng thái tài liệu:** Proposed v1.0 — chờ PO nghiệm thu tài liệu; chưa triển khai CSS/component. Không gọi toàn bộ Design System là Approved.
+**Trạng thái tài liệu:** v1.0 — **Approved theo phạm vi DS-P01…DS-P07 ngày 24/11/2026**; DS-P05 chỉ duyệt thử nghiệm hai viewport, DS-P08 cần đặc tả riêng. Các chi tiết ngoài quyết định vẫn Proposed/Pending Approval; chưa coi toàn bộ layout hoặc UI-03 là Approved.
 
 ## 0. Thẩm quyền, nguồn và cách đọc
 
-| Trạng thái           | Nội dung                                                                                                                                                                                                                                       | Nguồn quyết định                                                                                                    |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **Approved**         | Phương án 2 — Minimal Professional; desktop-first, tiếng Việt; không bo góc (`border-radius: 0`), không neon glow, không gradient trang trí dư thừa, không shadow mạnh; panel phẳng/viền mảnh, màu ít bão hòa, lavender xám, spacing nhất quán | Task Design System do PO cung cấp và xác nhận tiếp tục                                                              |
-| **Approved**         | R0 Editor Lease/read-only được PO nghiệm thu ngày 24/11/2026 qua trả lời “xác nhận” sau câu hỏi xác nhận nghiệm thu R0                                                                                                                         | [Bản ghi nghiệm thu R0](UI_R0_LEASE_FIX_RESULTS.md#po-acceptance-r0)                                                |
-| **Approved**         | Cấu trúc Editor, no-page-scroll, Preview/Timeline thường trực ở chế độ thường, resize và bảo toàn nghiệp vụ                                                                                                                                    | [UI-02 nguyên văn](UI_02_VIDEO_EDITOR.md), Approved for Design                                                      |
-| **Approved**         | Hướng D-01…D-05; Dashboard template-first/dark-purple                                                                                                                                                                                          | [Sổ quyết định](UI_GAP_ANALYSIS.md#5-sổ-quyết-định-d-01d-06--cập-nhật-po-24112026); UI-01 vẫn Proposed về wireframe |
-| **Proposed**         | Mọi giá trị token, typography, kích thước, API component, breakpoints, timing và mẫu interaction cụ thể dưới đây, trừ quy tắc Approved nêu rõ                                                                                                  | Đề xuất của Codex cho PO review                                                                                     |
-| **Pending Approval** | DS-P01…DS-P08 ở §11; D-06 vẫn Recommended Decision                                                                                                                                                                                             | Chưa được coi là quyền triển khai hoặc thay contract                                                                |
+| Trạng thái             | Nội dung                                                                                                                                                                                                                                       | Nguồn quyết định                                                                                                    |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Approved**           | Phương án 2 — Minimal Professional; desktop-first, tiếng Việt; không bo góc (`border-radius: 0`), không neon glow, không gradient trang trí dư thừa, không shadow mạnh; panel phẳng/viền mảnh, màu ít bão hòa, lavender xám, spacing nhất quán | Task Design System do PO cung cấp và xác nhận tiếp tục                                                              |
+| **Approved**           | R0 Editor Lease/read-only được PO nghiệm thu ngày 24/11/2026 qua trả lời “xác nhận” sau câu hỏi xác nhận nghiệm thu R0                                                                                                                         | [Bản ghi nghiệm thu R0](UI_R0_LEASE_FIX_RESULTS.md#po-acceptance-r0)                                                |
+| **Approved**           | Cấu trúc Editor, no-page-scroll, Preview/Timeline thường trực ở chế độ thường, resize và bảo toàn nghiệp vụ                                                                                                                                    | [UI-02 nguyên văn](UI_02_VIDEO_EDITOR.md), Approved for Design                                                      |
+| **Approved**           | Hướng D-01…D-05; Dashboard template-first/dark-purple                                                                                                                                                                                          | [Sổ quyết định](UI_GAP_ANALYSIS.md#5-sổ-quyết-định-d-01d-06--cập-nhật-po-24112026); UI-01 vẫn Proposed về wireframe |
+| **Approved**           | Palette hiện tại; Segoe UI cho giao diện v1; body14px/label13px/caption12px; component/tương tác với keyboard và lỗi rõ; template trước recent; triển khai R1 theo từng phần, không gộp Advanced Editor                                        | PO xác nhận DS-P01…DS-P07, xem §11                                                                                  |
+| **Approved for trial** | DS-P05: thử nghiệm ở1366×768 và1920×1080; chưa đồng nghĩa các breakpoint/Compact Mode nhỏ hơn đã nghiệm thu                                                                                                                                    | Quyết định PO ngày24/11/2026                                                                                        |
+| **Proposed**           | Heading scale/line-height/weights và kích thước chưa được chốt cụ thể; compact/breakpoints, persistence/metadata contract và chi tiết ngoài các quyết định                                                                                     | Chỉ triển khai theo phase/contract được duyệt, không tự nâng quyền từ ảnh                                           |
+| **Pending Approval**   | DS-P08: bản thảo UI-03 riêng và contract progress/error/cancel; D-06 vẫn Recommended                                                                                                                                                           | Chưa duyệt API/schema mới hoặc cloud acceptance                                                                     |
 
 Đã đối chiếu [AGENTS](../../AGENTS.md), PRD/SRS/RTM/OPEN_QUESTIONS **tại root** (đường dẫn docs/requirements trong AGENTS không tồn tại), [ADR-0001](../decisions/ADR-0001-LOCAL_MVP_ARCHITECTURE.md), [ADR-0002](../decisions/ADR-0002-DIRECT_GOOGLE_DRIVE.md), [MVP contracts](../architecture/MVP_CONTRACTS.md), [UI-01](UI_01_DASHBOARD.md), [UI-02](UI_02_VIDEO_EDITOR.md), [Gap Analysis](UI_GAP_ANALYSIS.md), [Plan](UI_REDESIGN_PLAN.md), CSS/config và sáu frontend components. Chi tiết hiện trạng: [UI Design Audit](UI_DESIGN_AUDIT.md).
 
-Ảnh PO cung cấp “Ảnh ChatGPT 13_13_56 24 thg 11, 2026.png” là **tham chiếu hình ảnh**, không phải screenshot ứng dụng. Dùng panel phẳng, nhịp phân cấp và lavender trong ảnh; Noto Serif VN/Inter là font candidate. Không sao chép toàn bộ mã màu/kích thước trong ảnh thành Approved. Hero ảnh lớn, góc bo, gradient trang trí, nút chức năng/hiệu ứng chưa hỗ trợ, gói Creative/quota 1TB và các số liệu giả không trở thành phạm vi sản phẩm. File ảnh ở máy PO, chưa đưa vào repo hoặc dùng làm asset production. Chưa tìm thấy đặc tả `UI-03`; khu Storage trong ảnh không tự trở thành một UI-03 đã phê duyệt.
+Ảnh PO cung cấp “Ảnh ChatGPT 13_13_56 24 thg 11, 2026.png” là **tham chiếu hình ảnh**, không phải screenshot ứng dụng. Dùng panel phẳng, nhịp phân cấp và lavender trong ảnh; Noto Serif VN/Inter là font candidate. Không sao chép toàn bộ mã màu/kích thước trong ảnh thành Approved. Hero ảnh lớn, góc bo, gradient trang trí, nút chức năng/hiệu ứng chưa hỗ trợ, gói Creative/quota 1TB và các số liệu giả không trở thành phạm vi sản phẩm. File ảnh ở máy PO, chưa đưa vào repo hoặc dùng làm asset production. Tại baseline chưa có đặc tả `UI-03`; theo DS-P08 đã soạn [UI-03 Storage Manager](UI_03_STORAGE_MANAGER.md) ở trạng thái Proposed, không suy khu Storage trong ảnh thành đặc tả đã duyệt.
 
 ## A. Design Principles
 
@@ -32,7 +34,7 @@
 
 Nguyên tắc là hướng **Approved** từ task; cách thể hiện cụ thể là **Proposed**. Design System chỉ style chrome ứng dụng; không đổi fonts, màu, radius hay animation bên trong composition/video user đang tạo. Video và ảnh có gradient/bo góc do nội dung project không vi phạm quy tắc shell.
 
-## B. Color System — Proposed
+## B. Color System — Approved DS-P01
 
 ### B1. Token architecture
 
@@ -86,7 +88,7 @@ Mục tiêu text ≥4.5:1; large text ≥3:1 (18pt regular hoặc 14pt bold); th
 
 Không tính ratio của scrim như control color. Ảnh/thumbnail/Preview có nền bất kỳ: đặt nhãn trên nền opaque đã kiểm, không giả định màu chữ luôn đủ tương phản trên video.
 
-## C. Typography — Proposed
+## C. Typography — Approved một phần theo DS-P02/03
 
 | Token                  | Font / weight                          | Size / line height | Sử dụng                                                                                                            |
 | ---------------------- | -------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------ |
@@ -102,7 +104,7 @@ Không tính ratio của scrim như control color. Ảnh/thumbnail/Preview có n
 | `type.caption`         | UI 400                                 | 12/16              | Metadata/phụ trợ; không dưới 12px trong chrome                                                                     |
 | `type.timecode`        | Numeric 400                            | 12/16              | `HH:MM:SS:FF`, FPS từ project; phân biệt với giây/ticks                                                            |
 
-Font family và scale vẫn chờ duyệt; không ngầm chọn Inter vì ảnh. Ưu tiên Segoe UI hiện có cho v1 để tránh thêm font trong bước chuẩn hóa; PO có thể chọn cặp serif-brand/Inter ở DS-P02. Khi bundle font: self-host, chỉ preload weight đầu màn hình cần dùng; không Google Font request. Không giấu label để chờ font, không làm toolbar đổi chiều cao. Fallback phải có đủ glyph, đo metrics khi triển khai. Không đổi font composition/MP4; đó là lựa chọn content có pipeline riêng.
+PO đã chọn **Segoe UI cho giao diện v1**, body14px/label13px/caption12px. Inter chỉ cân nhắc sau; Noto Serif không được tự thêm làm font tiêu đề. Heading scale, line-height và các chi tiết typography khác ở bảng là đề xuất chưa được quyết định riêng. Không dùng ảnh để ngầm đổi font đã chốt. Khi bundle font: self-host, chỉ preload weight đầu màn hình cần dùng; không Google Font request. Không giấu label để chờ font, không làm toolbar đổi chiều cao. Fallback phải có đủ glyph, đo metrics khi triển khai. Không đổi font composition/MP4; đó là lựa chọn content có pipeline riêng.
 
 Dùng rem cho text và kích thước control cơ bản, không khóa zoom trình duyệt. Font weight 400/500/600; 700 chỉ cảnh báo/heading cần nhấn. Letter spacing 0 cho body/label, heading tối đa -0.01em, không tracking rộng cho dấu Việt nhỏ. Stress string: “Hòa Âm — Đường về quê hương, Nguyễn Thị Mỹ; Ắ Ằ Ẳ Ẵ Ặ Ế Ề Ể Ễ Ệ Ỹ Ỵ; 00:01:24:12; 1.250,5”. Không clip dấu khi line-height/reserve-space thay đổi.
 
@@ -132,11 +134,11 @@ Tên file: `min-width:0` trên grid/flex child; card tối đa hai dòng tên, `
 
 Density là presentation, không thay viewport time, ticks, project data, history hay dirty. Dense dùng 32px control/12px padding, không 10px text. Không áp density toàn app bằng `transform:scale`. Hit area cần không overlap; icon nhỏ có thể nằm trong target lớn. Clip có duration hiển thị hẹp hơn 24px phải có cách chọn/chỉnh bằng danh sách/numeric, không kéo rộng clip làm sai thời gian.
 
-## E. Component System — Proposed specification
+## E. Component System — Approved design theo DS-P04
 
 ### E0. Contract chung
 
-Tất cả component bên dưới theo tám mục: vai trò, cấu trúc, variants, kích thước, states, keyboard/accessibility, nên dùng, không nên dùng. Tên API là ý tưởng, chưa tạo TS files hoặc public contract. Mỗi control có default/hover/pressed/focus-visible/disabled và loading khi phù hợp; selected khác focus; error không thay nhãn. Header/status giữ footprint, thông báo dài có vùng đọc đầy đủ, không chỉ ellipsis mất lỗi.
+PO duyệt component và tương tác, bắt buộc keyboard và trạng thái lỗi rõ. Đây là duyệt thiết kế, không phải kết quả kiểm triển khai. Những kích thước/layout phụ thuộc DS-P05 vẫn phải thử nghiệm. Tất cả component bên dưới theo tám mục: vai trò, cấu trúc, variants, kích thước, states, keyboard/accessibility, nên dùng, không nên dùng. Tên API là ý tưởng, chưa tạo TS files hoặc public contract. Mỗi control có default/hover/pressed/focus-visible/disabled và loading khi phù hợp; selected khác focus; error không thay nhãn. Header/status giữ footprint, thông báo dài có vùng đọc đầy đủ, không chỉ ellipsis mất lỗi.
 
 Primitive nhận presentation + value/callback, không tự fetch session/claim/takeover, không sở hữu bản project thứ hai. `readOnly`, `disabled`, `busy`, `invalid`, `reasonId` phải tách; không dùng boolean `loading` làm writable. Không có hành động nghiệp vụ trong Tooltip/Toast. Native elements là mặc định nếu đạt interaction; custom ARIA cần keyboard test. Icon SVG decorative `aria-hidden`; icon-only button có accessible name độc lập tooltip. Ưu tiên SVG nhỏ tự quản từ nguồn có license rõ; chưa thêm UI/icon library.
 
@@ -470,23 +472,27 @@ Mục tiêu là **WCAG 2.2 AA khi triển khai**, chưa là chứng nhận confo
 | D-01/D-04              | Project card và separator UI không mutate content                     | Persistence xuyên port chưa được tự chọn API/DB; chỉ proposal                                                |
 | D-02/D-06              | Inspector/media hiển thị field hiện hữu, unknown fallback             | Advanced property và DTO delta phải được duyệt trước; Recommended khác Approved                              |
 
-R1.A đề xuất: tokens + primitives + component state specimens dùng dữ liệu giả **được gắn nhãn specimen** sau khi được phép code, không thay màn hình hoạt động; R1.B Dashboard integration sau wireframe/D-01/navigation contract. R3 layout, R4 typed panels, R5 Storage/Export, R6 regression tiếp tục theo plan. Tạo tài liệu này không là lệnh triển khai bất kỳ phần nào.
+DS-P07 đã duyệt triển khai R1 theo từng phần: R1.A tokens + primitives + state specimens **được gắn nhãn kiểm thử**, không thay màn hình hoạt động; R1.B Dashboard integration sau wireframe/D-01/navigation contract còn lại. Không gộp Advanced Editor. R3 layout, R4 typed panels, R5 Storage/Export, R6 regression tiếp tục theo plan. Quyền triển khai theo từng phần đến từ DS-P07, không đến từ việc tạo tài liệu; không bao gồm backend Drive hoặc API/schema delta chưa duyệt.
 
-## 11. Pending Approval — quyết định PO cần chốt
+## 11. Quyết định PO — DS-P01…DS-P08
 
-| ID     | Nội dung cần duyệt                         | Khuyến nghị / tác động                                                                                                            |
-| ------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| DS-P01 | Bộ palette/token, viền control và focus    | Duyệt B, giữ7 màu khởi điểm + bổ sung viền/control/semantic; không dùng border nhẹ cho input                                      |
-| DS-P02 | Typography shell và wordmark               | Segoe UI v1 để tái sử dụng; Noto Serif Vietnamese + Inter từ ảnh là candidate local có license/glyph review, không đổi font video |
-| DS-P03 | Scale/density/targets                      | Duyệt 14px body, 13px label, 12px caption; control36/32; radius0 đã Approved không cần duyệt lại                                  |
-| DS-P04 | Component keyboard/feedback                | Duyệt E/G/I, separator không collapse, có numeric/reset; error persistent và busy đúng nghiệp vụ                                  |
-| DS-P05 | Layout kích thước/compact/zoom             | Duyệt thử hai viewport và candidate breakpoints F; dưới960px/thiếu chiều cao chưa chốt acceptance hiển thị đồng thời              |
-| DS-P06 | Dashboard wireframe và phạm vi R1.B        | Ba template trước recent, hero gọn; duyệt navigation/dirty guard, không theo nguyên thứ tự ảnh                                    |
-| DS-P07 | Phạm vi R1.A và R1.B                       | Chỉ bắt đầu code sau nghiệm thu docs; persistence D-01/D-04 cần contract riêng, không gộp advanced/Drive vào token task           |
-| DS-P08 | Tài liệu UI-03 / phạm vi Storage trong ảnh | Chưa nhận UI-03; dùng UI-02§11 + D-03 làm nguồn hiện có; nếu có spec riêng PO cung cấp để đối chiếu, không tự tạo yêu cầu         |
+**Ngày quyết định:** 24/11/2026 (Asia/Saigon). **Nguồn:** bảng DS-P01…DS-P08 do PO gửi trong hội thoại sau khi tài liệu v1.0 được push ở commit `4681031`. Ghi nhận đúng phạm vi dưới đây, không biến duyệt thử nghiệm thành test Passed.
+
+| ID     | Nội dung               | Quyết định PO                                              | Trạng thái / giới hạn                                                                                                                               |
+| ------ | ---------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DS-P01 | Bảng màu               | Duyệt palette hiện tại                                     | **Approved**: bảng B gồm semantic, viền control/focus; contrast runtime còn cần kiểm                                                                |
+| DS-P02 | Font chữ               | Segoe UI cho giao diện v1; cân nhắc Inter sau              | **Approved** Segoe UI; Inter/Noto Serif không thêm trong v1 nếu chưa có quyết định mới                                                              |
+| DS-P03 | Kích thước             | Duyệt body14px, label13px, caption12px                     | **Approved** ba cỡ chữ; không tự gọi mọi heading/control/breakpoint đã được nghiệm thu                                                              |
+| DS-P04 | Component và tương tác | Duyệt, bắt buộc keyboard và trạng thái lỗi rõ              | **Approved for design** E/G/I; mỗi phần triển khai phải có evidence keyboard/error, không che lỗi nghiệp vụ                                         |
+| DS-P05 | Layout responsive      | Duyệt thử nghiệm ở1366×768 và1920×1080                     | **Approved for trial** hai viewport; Compact Mode/breakpoint nhỏ hơn, kích thước thực và nghiệm thu geometry còn phải review/test                   |
+| DS-P06 | Dashboard              | Duyệt template trước, dự án gần đây sau                    | **Approved** thứ tự nội dung; UI-01 chưa thành Approved toàn bộ wireframe, recent persistence cần contract                                          |
+| DS-P07 | Phạm vi R1             | Duyệt triển khai theo từng phần, không gộp Advanced Editor | **Approved phased implementation**: R1.A foundations trước, R1.B Dashboard sau dependency; không cấp quyền tự commit/push/merge hoặc API/schema mới |
+| DS-P08 | Google Drive UI-03     | Cần hoàn thiện tài liệu riêng                              | **Documentation requested**: [bản thảo UI-03](UI_03_STORAGE_MANAGER.md) Proposed, cần PO review; không phải quyền triển khai Storage/transfer APIs  |
+
+**Còn cần chốt:** UI-01 wireframe chi tiết/navigation; contract recent/preferences D-01/D-04; kích thước/breakpoint compact ngoài hai viewport thử; typography ngoài font UI và ba body sizes; UI-03 cùng delta progress/error/cancel. D-06 không được chuyển khỏi Recommended qua bảng này.
 
 ## 12. Verification & handoff
 
 Đã khảo sát static code, tính contrast ở B2, đối chiếu tài liệu/ảnh tham chiếu và W3C primary sources ngày24/11/2026. Không sửa ứng dụng hoặc cài fonts/libraries; không chạy UI/build/regression mới cho một thay đổi chỉ có tài liệu. Test R0 được liên kết như evidence lịch sử và PO acceptance riêng, không tính là pass Design System.
 
-Sau khi PO duyệt và giao R1: kiểm contrast của computed styles và mọi state; button/field/tab/tooltip/popover/dialog/progress/separator keyboard+NVDA; dirty/lease R0 dev+production; scene CSS leakage; two desktop viewports, compact/zoom/reduced motion, Vietnamese/long names/loading/error. Trình screenshots state matrix và browser evidence trước tuyên bố UI-ED/DS pass. UI-01 Proposed và UI-02 nguyên văn vẫn giữ, không rewrite spec được duyệt.
+Theo quyền triển khai từng phần DS-P07, khi thực thi mỗi phần R1: kiểm contrast của computed styles và mọi state; button/field/tab/tooltip/popover/dialog/progress/separator keyboard+NVDA; dirty/lease R0 dev+production; scene CSS leakage; two desktop viewports, compact/zoom/reduced motion, Vietnamese/long names/loading/error. Trình screenshots state matrix và browser evidence trước tuyên bố UI-ED/DS pass. UI-01 Proposed và UI-02 nguyên văn vẫn giữ, không rewrite spec được duyệt.

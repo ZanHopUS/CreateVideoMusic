@@ -4,6 +4,8 @@
 
 **Phạm vi:** static audit phục vụ [Design System v1.0](DESIGN_SYSTEM.md), không triển khai code/CSS, không phải accessibility conformance report. R0 lease đã được PO nghiệm thu riêng trong phiên, xem [bản ghi](UI_R0_LEASE_FIX_RESULTS.md#po-acceptance-r0). Style Minimal Professional Approved; tokens/primitive/layout details Proposed, chờ PO.
 
+**Cập nhật quyết định PO:** sau audit baseline, DS-P01…DS-P07 đã được duyệt theo phạm vi [DS§11](DESIGN_SYSTEM.md#11-quyết-định-po--ds-p01ds-p08); DS-P05 chỉ duyệt thử hai viewport, DS-P08 yêu cầu [UI-03 riêng](UI_03_STORAGE_MANAGER.md) hiện Proposed. Các câu “chưa có UI-03/chờ PO” bên dưới mô tả thời điểm baseline, không thay quyết định mới. Chưa sửa application code trong lượt ghi nhận này.
+
 ## 1. Nguồn và phương pháp
 
 Đã đọc AGENTS, UI-01, UI-02 nguyên văn, Gap Analysis/Plan, R0 diagnosis/results, D-01…D-06 trong Gap Analysis (không có tài liệu quyết định riêng), ADR-0001/0002 và MVP contracts. PRD/SRS/RTM/OPEN_QUESTIONS nằm root; docs/requirements chưa tồn tại. Không tìm thấy `UI_03` hoặc spec Storage độc lập. Ảnh PO gửi có mục03 kho lưu trữ, không phải văn bản yêu cầu mới.
