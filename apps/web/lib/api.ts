@@ -24,6 +24,15 @@ export type Job = {
   message: string;
   resourceSampledPass?: boolean;
 };
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public code?: string,
+  ) {
+    super(message);
+  }
+}
 export class Api {
   private editor = crypto.randomUUID();
   constructor(private token: string) {}
@@ -40,7 +49,11 @@ export class Api {
     });
     const value = await response.json();
     if (!response.ok)
-      throw new Error(value.message ?? 'Thao tác chưa hoàn tất.');
+      throw new ApiError(
+        value.message ?? 'Thao tác chưa hoàn tất.',
+        response.status,
+        value.code,
+      );
     return value as T;
   }
   json<T>(path: string, method: string, value: unknown) {

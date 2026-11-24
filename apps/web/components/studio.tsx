@@ -192,7 +192,7 @@ export function Studio() {
               {!writeAllowed && (
                 <p role="status">
                   Tab này chỉ đọc.{' '}
-                  <button onClick={() => takeOver().catch(() => {})}>
+                  <button disabled={busy} onClick={takeOver}>
                     Nhận quyền chỉnh sửa
                   </button>
                 </p>
