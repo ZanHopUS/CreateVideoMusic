@@ -1,8 +1,20 @@
 # R0 — Editor Lease / Read-only: implementation và regression
 
-**Ngày:** 24/11/2026 (Asia/Saigon) · **Nhánh:** `dev` · **Trạng thái:** đã triển khai và hoàn tất các lượt kiểm bổ sung; **sẵn sàng trình PO nghiệm thu chức năng R0 lease**, chưa ghi nhận PO Passed.
+**Ngày:** 24/11/2026 (Asia/Saigon) · **Nhánh:** `dev` · **Trạng thái:** đã triển khai, kiểm bổ sung; **PO Accepted — R0 Editor Lease / Read-only**, xác nhận ngày 24/11/2026 (Asia/Saigon).
 
 Phạm vi này được PO cho phép riêng cho R0 lease. Không triển khai Dashboard/Editor redesign, không thay backend, project schema, renderer, Drive, lease TTL hoặc optimistic concurrency. UI-01 vẫn Proposed; UI-02 nguyên văn vẫn Approved for Design — Not Implemented.
+
+<a id="po-acceptance-r0"></a>
+
+## PO acceptance — R0 Editor Lease / Read-only
+
+**Quyết định:** Product Owner xác nhận nghiệm thu R0 ngày **24/11/2026 (Asia/Saigon)** trong hội thoại, qua trả lời **“xác nhận”** cho đề nghị “Bạn xác nhận nghiệm thu R0, tôi sẽ cập nhật bản ghi đó rồi tiếp tục xây dựng tài liệu Design System v1.0, không sửa code giao diện”. Đây là quyết định của PO, không phải agent tự chuyển Passed từ số tests hoặc việc push.
+
+**Đối tượng nghiệm thu:** bản sửa R0 Editor Lease/read-only tại commit `d12015a` trên `dev`, cùng evidence trong báo cáo này: unit36/integration47, browser chính27/28 với failure cũ giữ nguyên, C06 retest2/2 và regression hiện hữu6/6. PO acceptance không sửa lịch sử failure thành28/28 pass.
+
+**Giới hạn bảo toàn:** chưa benchmark latency reconnect dài hạn/SLO12s; native OS picker chưa kiểm lại; không nghiệm thu toàn bộ R0 wireframe/contracts, UI-01/02 redesign, cloud quality hoặc các gate phát hành còn mở. R0 lease acceptance mở điều kiện đọc/soạn Design System; **chưa cho phép code R1**, commit/push/merge trong nhiệm vụ tài liệu mới.
+
+Các đoạn “sẵn sàng trình PO” trong phần bàn giao bên dưới được giữ là diễn biến trước xác nhận; bản ghi này là trạng thái hiện hành mới nhất. Bằng chứng test, build ID và phạm vi không đổi.
 
 ## Nguyên nhân và giải pháp
 
