@@ -17,7 +17,14 @@ import {
   removeClip,
   validateMediaWindows,
 } from '@amvs/domain';
-import { Api, type Asset, type Job, type RecordState } from '../lib/api';
+import { EditorLease } from '../lib/editor-lease';
+import {
+  Api,
+  ApiError,
+  type Asset,
+  type Job,
+  type RecordState,
+} from '../lib/api';
 
 export function useStudio() {
   const api = useRef<Api | null>(null),
@@ -34,8 +41,8 @@ export function useStudio() {
   const [panels, setPanels] = useState<Record<string, boolean>>({});
   const viewRef = useRef({ selection: selected, timelineZoom: zoom, panels });
   viewRef.current = { selection: selected, timelineZoom: zoom, panels };
-  const [writeAllowed, setWriteAllowed] = useState(true);
-  const writeRef = useRef(true);
+  const [writeAllowed, setWriteAllowed] = useState(false);
+  const lease = useRef<EditorLease | null>(null);
   const [missingMedia, setMissingMedia] = useState<string[]>([]);
   const [busy, setBusy] = useState(false),
     [dirty, setDirty] = useState(false),
@@ -46,29 +53,12 @@ export function useStudio() {
   const pendingSeek = useRef<{ id: string; frame: number } | null>(null);
   const assetsRef = useRef<Asset[]>([]);
   const operationBusy = useRef(false);
+  const mounted = useRef(false);
   function show(p: ProjectContent) {
     latest.current = p;
     setProject(p);
   }
-  const adopt = useCallback((value: RecordState) => {
-    writeRef.current = false;
-    setWriteAllowed(false);
-    api.current
-      ?.json<{ canWrite: boolean }>(
-        `projects/${value.project.id}/editor-session`,
-        'POST',
-        { takeover: false },
-      )
-      .then((lease) => {
-        if (latest.current?.id !== value.project.id) return;
-        writeRef.current = lease.canWrite;
-        setWriteAllowed(lease.canWrite);
-        if (!lease.canWrite)
-          setMessage(
-            'Project đang mở ở tab khác. Tab này chỉ đọc; có thể nhận quyền chỉnh sửa.',
-          );
-      })
-      .catch((e) => setMessage(e.message));
+  const applyRecord = useCallback((value: RecordState) => {
     record.current = value;
     history.current = new History(value.project);
     latest.current = value.project;
@@ -96,14 +86,17 @@ export function useStudio() {
           ) as Record<string, boolean>)
         : {},
     );
+    const epoch = authority();
     setMissingMedia([]);
     api.current
       ?.call<{ missing: string[] }>(`projects/${value.project.id}/media-status`)
       .then((status) => {
-        if (latest.current?.id === value.project.id)
+        if (currentAuthority(epoch) && latest.current?.id === value.project.id)
           setMissingMedia(status.missing);
       })
-      .catch(() => {});
+      .catch((error) => {
+        if (currentAuthority(epoch)) setMessage(error.message);
+      });
     const tick = Number(value.view.playheadTicks ?? 0);
     const maximum =
       Math.ceil(
@@ -124,20 +117,52 @@ export function useStudio() {
     api.current
       ?.call<(Job & { projectId: string })[]>('jobs')
       .then((rows) => {
-        if (latest.current?.id === value.project.id)
+        if (currentAuthority(epoch) && latest.current?.id === value.project.id)
           setJob(
             rows.find(
               (j) => j.projectId === value.project.id && j.kind === 'render',
             ) ?? null,
           );
       })
-      .catch(() => {});
+      .catch((error) => {
+        if (currentAuthority(epoch)) setMessage(error.message);
+      });
   }, []);
+  function adopt(value: RecordState) {
+    lease.current?.open(value.project.id);
+    applyRecord(value);
+  }
+  function writable() {
+    return lease.current?.canWrite() ?? false;
+  }
+  function authority() {
+    return { controller: lease.current, epoch: lease.current?.stamp() };
+  }
+  function currentAuthority(token: ReturnType<typeof authority>) {
+    return (
+      lease.current === token.controller &&
+      !!token.controller?.current(token.epoch!)
+    );
+  }
+  function assertCurrent(token: ReturnType<typeof authority>) {
+    if (!currentAuthority(token)) throw new Error('Phiên project đã thay đổi.');
+  }
+  function assertAuthority(token: ReturnType<typeof authority>) {
+    assertCurrent(token);
+    if (!writable())
+      throw new Error(
+        'Quyền chỉnh sửa đã thay đổi. Hãy nhận quyền và tải lại project.',
+      );
+  }
   const refresh = useCallback(async () => {
     const client = api.current!;
-    assetsRef.current = await client.call<Asset[]>('assets');
-    setAssets(assetsRef.current);
-    setProjects(await client.call<{ id: string; name: string }[]>('projects'));
+    const loadedAssets = await client.call<Asset[]>('assets');
+    const loadedProjects =
+      await client.call<{ id: string; name: string }[]>('projects');
+    if (!mounted.current || api.current !== client) return;
+    assetsRef.current = loadedAssets;
+    setAssets(loadedAssets);
+    setProjects(loadedProjects);
   }, []);
   useEffect(() => {
     const target = pendingSeek.current;
@@ -148,6 +173,7 @@ export function useStudio() {
   }, [project]);
   useEffect(() => {
     let active = true;
+    mounted.current = true;
     const fromFragment = new URLSearchParams(location.hash.slice(1)).get(
       'session',
     );
@@ -170,6 +196,15 @@ export function useStudio() {
         if (typeof token !== 'string' || !token)
           throw new Error('Phiên Studio không hợp lệ.');
         api.current = new Api(token);
+        lease.current = new EditorLease(api.current, {
+          record: () => record.current,
+          apply: applyRecord,
+          pins: historyPins,
+          state: (allowed) => {
+            setWriteAllowed(allowed);
+          },
+          message: setMessage,
+        });
         await api.current.call('session');
         await refresh();
         if (active) {
@@ -186,8 +221,10 @@ export function useStudio() {
     connect();
     return () => {
       active = false;
+      mounted.current = false;
+      lease.current?.dispose();
     };
-  }, [refresh]);
+  }, [refresh, applyRecord]);
   useEffect(() => {
     if (!project) return;
     let active = true;
@@ -207,7 +244,7 @@ export function useStudio() {
     };
   }, [project, dirty]);
   function change(operation: (p: ProjectContent) => void) {
-    if (!writeRef.current) {
+    if (!writable()) {
       setMessage('Tab này chỉ đọc. Nhận quyền chỉnh sửa trước.');
       return false;
     }
@@ -226,10 +263,12 @@ export function useStudio() {
     }
   }
   async function sync(snapshot: ProjectContent): Promise<RecordState> {
+    const epoch = authority();
     let result: RecordState | undefined;
     const action = serial.current
       .catch(() => {})
       .then(async () => {
+        assertAuthority(epoch);
         const current = record.current!;
         if (current.project.id !== snapshot.id)
           throw new Error('Project đã thay đổi.');
@@ -256,18 +295,25 @@ export function useStudio() {
             view,
           },
         );
+        assertAuthority(epoch);
         if (record.current?.project.id === snapshot.id) record.current = result;
       });
     serial.current = action;
-    await action;
+    try {
+      await action;
+    } catch (error) {
+      if (currentAuthority(epoch)) lease.current?.fail(error);
+      throw error;
+    }
     return result!;
   }
   useEffect(() => {
     if (!project || !ready || !writeAllowed) return;
-    const timer = setTimeout(
-      () => sync(project).catch((e) => setMessage(e.message)),
-      800,
-    );
+    const timer = setTimeout(() => {
+      void sync(project).catch(() => {
+        /* sync reports current-epoch failures. */
+      });
+    }, 800);
     return () => clearTimeout(timer);
   }, [project, ready, selected, zoom, panels, writeAllowed]);
   useEffect(() => {
@@ -277,85 +323,59 @@ export function useStudio() {
     )
       return;
     let active = true;
+    const epoch = authority();
     const timer = setInterval(
       () =>
         api
           .current!.call<Job>(`jobs/${job.id}`)
           .then((value) => {
-            if (active) setJob(value);
+            if (active && currentAuthority(epoch)) setJob(value);
           })
-          .catch((e) => setMessage(e.message)),
+          .catch((e) => {
+            if (active && currentAuthority(epoch)) setMessage(e.message);
+          }),
       1000,
     );
     return () => {
       active = false;
       clearInterval(timer);
     };
-  }, [job]);
+  }, [job, writeAllowed, project?.id]);
   async function perform(action: () => Promise<void>) {
     if (operationBusy.current) {
       setMessage('Hãy chờ thao tác hiện tại hoàn tất.');
       return;
     }
+    const epoch = authority();
     operationBusy.current = true;
     setBusy(true);
     try {
       await action();
     } catch (e) {
-      setMessage((e as Error).message);
+      if (!mounted.current || !currentAuthority(epoch)) return;
+      if (e instanceof ApiError && [401, 409].includes(e.status))
+        lease.current?.fail(e);
+      else setMessage((e as Error).message);
     } finally {
       operationBusy.current = false;
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
   }
   useEffect(() => {
-    if (!project || !ready) return;
-    let active = true;
-    const timer = setInterval(
-      () =>
-        writeRef.current &&
-        api
-          .current!.json<{ canWrite: boolean }>(
-            `projects/${project.id}/editor-session`,
-            'POST',
-            { takeover: false, ...historyPins() },
-          )
-          .then((lease) => {
-            if (!active) return;
-            if (writeRef.current && !lease.canWrite)
-              setMessage(
-                'Tab khác đã nhận quyền. Chỉnh sửa chưa ghi trong tab này vẫn giữ trong bộ nhớ; không ghi đè dữ liệu mới.',
-              );
-            writeRef.current = lease.canWrite;
-            setWriteAllowed(lease.canWrite);
-          })
-          .catch((e) => {
-            if (active) setMessage(e.message);
-          }),
-      5000,
-    );
+    const release = () => lease.current?.release();
+    // pagehide fires only for an actual departure, unlike a cancelled beforeunload.
+    window.addEventListener('pagehide', release);
+    const check = () => {
+      lease.current?.canWrite();
+    };
+    window.addEventListener('focus', check);
+    document.addEventListener('visibilitychange', check);
     return () => {
-      active = false;
-      clearInterval(timer);
+      window.removeEventListener('pagehide', release);
+      window.removeEventListener('focus', check);
+      document.removeEventListener('visibilitychange', check);
     };
-  }, [project?.id, ready]);
-  useEffect(() => {
-    if (!project || !ready) return;
-    const id = project.id;
-    const release = () => {
-      api.current
-        ?.call(`projects/${id}/editor-session`, {
-          method: 'DELETE',
-          keepalive: true,
-        })
-        .catch(() => {});
-    };
-    window.addEventListener('beforeunload', release);
-    return () => {
-      window.removeEventListener('beforeunload', release);
-      release();
-    };
-  }, [project?.id, ready]);
+  }, []);
   function historyPins() {
     const pins = history.current?.assetPins() ?? [];
     return pins.length > 4096
@@ -373,26 +393,30 @@ export function useStudio() {
   async function create(template: 'TPL-01' | 'TPL-02' | 'TPL-03' = 'TPL-01') {
     if (!canLeave()) return;
     await perform(async () => {
-      if (latest.current && writeRef.current) await sync(latest.current);
-      adopt(
-        await api.current!.json<RecordState>(
-          'projects',
-          'POST',
-          template === 'TPL-02'
-            ? newMusicCardProject(crypto.randomUUID())
-            : template === 'TPL-03'
-              ? newLyricsProject(crypto.randomUUID())
-              : newProject(crypto.randomUUID()),
-        ),
+      if (latest.current && writable()) await sync(latest.current);
+      const epoch = authority();
+      const created = await api.current!.json<RecordState>(
+        'projects',
+        'POST',
+        template === 'TPL-02'
+          ? newMusicCardProject(crypto.randomUUID())
+          : template === 'TPL-03'
+            ? newLyricsProject(crypto.randomUUID())
+            : newProject(crypto.randomUUID()),
       );
+      assertCurrent(epoch);
+      adopt(created);
       await refresh();
     });
   }
   async function open(id: string) {
     if (!canLeave()) return;
     await perform(async () => {
-      if (latest.current && writeRef.current) await sync(latest.current);
-      adopt(await api.current!.call<RecordState>(`projects/${id}`));
+      if (latest.current && writable()) await sync(latest.current);
+      const epoch = authority();
+      const opened = await api.current!.call<RecordState>(`projects/${id}`);
+      assertCurrent(epoch);
+      adopt(opened);
     });
   }
   async function choose(scope: 'project' | 'export') {
@@ -404,12 +428,14 @@ export function useStudio() {
     return result.id;
   }
   async function save() {
-    if (!writeRef.current) {
+    if (!writable()) {
       setMessage('Tab này chỉ đọc.');
       return;
     }
     await perform(async () => {
+      const epoch = authority();
       const grantId = await choose('project');
+      assertAuthority(epoch);
       const snapshot = structuredClone(latest.current!);
       const current = await sync(snapshot);
       const saved = await api.current!.json<RecordState>(
@@ -417,12 +443,15 @@ export function useStudio() {
         'POST',
         { project: snapshot, revision: current.revision, grantId },
       );
+      assertAuthority(epoch);
       if (record.current?.project.id === snapshot.id)
         record.current = {
           ...record.current,
           manualSavedHash: saved.manualSavedHash,
         };
-      setDirty((await contentHash(latest.current!)) !== saved.manualSavedHash);
+      const currentHash = await contentHash(latest.current!);
+      assertAuthority(epoch);
+      setDirty(currentHash !== saved.manualSavedHash);
       setMessage(
         'Đã lưu project thủ công. Media được giữ trong thư viện local.',
       );
@@ -430,30 +459,33 @@ export function useStudio() {
     });
   }
   async function render() {
-    if (!writeRef.current) {
+    if (!writable()) {
       setMessage('Tab này chỉ đọc.');
       return;
     }
     await perform(async () => {
+      const epoch = authority();
       const grantId = await choose('export');
+      assertAuthority(epoch);
       const current = await sync(structuredClone(latest.current!));
-      setJob(
-        await api.current!.json<Job>('jobs', 'POST', {
-          projectId: current.project.id,
-          revision: current.revision,
-          grantId,
-        }),
-      );
+      const rendered = await api.current!.json<Job>('jobs', 'POST', {
+        projectId: current.project.id,
+        revision: current.revision,
+        grantId,
+      });
+      assertAuthority(epoch);
+      setJob(rendered);
     });
   }
   async function upload(files: File[]) {
-    if (!writeRef.current) {
+    if (!writable()) {
       setMessage('Tab này chỉ đọc.');
       return;
     }
     await perform(async () => {
       if (!rights)
         throw new Error('Hãy xác nhận quyền dùng media trước khi nhập.');
+      const epoch = authority();
       const projectId = latest.current?.id;
       const imported: Asset[] = [],
         errors: string[] = [];
@@ -473,6 +505,7 @@ export function useStudio() {
         }
       }
       await refresh();
+      assertAuthority(epoch);
       if (latest.current?.id !== projectId)
         throw new Error(
           'Project đã đổi. Media đã nhập vẫn nằm trong thư viện.',
@@ -550,20 +583,22 @@ export function useStudio() {
     assets.map((a) => [a.id, `/api/v1/assets/${a.id}/content`]),
   );
   function undo() {
-    if (!writeRef.current) return;
+    if (!writable()) return;
     if (history.current?.undo()) show(history.current.read());
   }
   function redo() {
-    if (!writeRef.current) return;
+    if (!writable()) return;
     if (history.current?.redo()) show(history.current.read());
   }
   async function openManual() {
     if (!canLeave()) return;
     await perform(async () => {
-      if (latest.current && writeRef.current) await sync(latest.current);
+      if (latest.current && writable()) await sync(latest.current);
+      const epoch = authority();
       const result = await api.current!.json<
         RecordState & { cancelled?: boolean }
       >('projects/open', 'POST', {});
+      assertCurrent(epoch);
       if (!result.cancelled) {
         adopt(result);
         await refresh();
@@ -579,7 +614,14 @@ export function useStudio() {
   async function cancelJob() {
     if (!job) return;
     await perform(async () => {
-      setJob(await api.current!.json<Job>(`jobs/${job.id}/cancel`, 'POST', {}));
+      const epoch = authority();
+      const cancelled = await api.current!.json<Job>(
+        `jobs/${job.id}/cancel`,
+        'POST',
+        {},
+      );
+      assertCurrent(epoch);
+      setJob(cancelled);
     });
   }
   return {
@@ -588,22 +630,15 @@ export function useStudio() {
     takeOver: async () => {
       if (
         !latest.current ||
+        operationBusy.current ||
         !window.confirm(
           'Nhận quyền chỉnh sửa và nạp bản mới nhất từ máy? Chỉnh sửa chưa ghi trong tab này sẽ bị bỏ; tab kia chuyển sang chỉ đọc.',
         )
       )
         return;
-      const id = latest.current.id;
-      const lease = await api.current!.json<{ canWrite: boolean }>(
-        `projects/${id}/editor-session`,
-        'POST',
-        { takeover: true },
-      );
-      if (lease.canWrite) {
-        writeRef.current = true;
-        setWriteAllowed(true);
-        adopt(await api.current!.call<RecordState>(`projects/${id}`));
-      }
+      await perform(async () => {
+        await lease.current?.acquire(true);
+      });
     },
     zoom,
     setZoom,
@@ -613,20 +648,16 @@ export function useStudio() {
         previous[key] === value ? previous : { ...previous, [key]: value },
       ),
     reloadFromServer: async () => {
-      if (latest.current)
-        adopt(
-          await api.current!.call<RecordState>(`projects/${latest.current.id}`),
+      if (!(await lease.current?.acquire(false)))
+        throw new Error(
+          'Không thể tải và xác nhận project mới nhất. Tab vẫn chỉ đọc; hãy nhận quyền lại.',
         );
     },
     apiClient: ready ? api.current : null,
     prepareBackup: async () => {
-      if (latest.current && writeRef.current) {
+      if (latest.current && writable()) {
         await sync(latest.current);
-        await api.current!.json(
-          `projects/${latest.current.id}/editor-session`,
-          'POST',
-          { takeover: false, ...historyPins() },
-        );
+        await lease.current?.checkpoint();
       }
     },
     ready,
