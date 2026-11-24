@@ -33,6 +33,7 @@ await renderMedia({
   outputLocation: path.join(folder, 'raw.mp4'),
   codec: 'h264',
   audioCodec: 'aac',
+  enforceAudioTrack: true,
   pixelFormat: 'yuv420p',
   concurrency: 1,
   offthreadVideoThreads: 1,

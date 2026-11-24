@@ -11,6 +11,12 @@ và conditional entry đã được duyệt; application implementation đã b�
 bảng FR là baseline planning, không tự đánh RTM Verified. S0–S6 là thứ tự delivery,
 không phải cam kết ngày hoặc bỏ tính năng Core.
 
+Cập nhật **24/11/2026**: người dùng yêu cầu tự lập kế hoạch và triển khai toàn bộ
+hạng mục tới S6. Phạm vi kỹ thuật S2–S6 đã được giao; không suy thành quyền
+commit/push/release hay phê duyệt các quality gates. [Kế hoạch thực thi](S2_S6_EXECUTION.md)
+và [kết quả hiện tại](S2_S6_RESULTS.md) là nguồn tiến độ; bảng mapping cuối tài liệu
+vẫn là baseline planning, không phải trạng thái implementation mới nhất.
+
 ## S0 — Foundation và smoke, trước feature work
 
 Tạo layout ADR, launcher local, exact lockfiles; Next/TS/Tailwind, Python API/env,

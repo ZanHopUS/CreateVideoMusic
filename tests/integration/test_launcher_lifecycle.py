@@ -81,3 +81,49 @@ def test_forged_owner_record_cannot_stop_unrelated_process(tmp_path):
             except psutil.NoSuchProcess:
                 pass
         child.wait(timeout=10)
+
+
+@pytest.mark.parametrize("exit_code", [0, 7])
+def test_command_exit_reaps_orphan_and_preserves_unrelated(tmp_path, exit_code):
+    from amvs.jobs import Jobs
+    from amvs.store import Store
+
+    folder = tmp_path / "command"
+    folder.mkdir()
+    pids = folder / "pids.json"
+    manager = Jobs(Store(tmp_path / "workspace"))
+    unrelated = subprocess.Popen([sys.executable, "-c", "import time;time.sleep(120)"])
+    known = {}
+    try:
+        args = [
+            sys.executable,
+            str(ROOT / "tests/fixtures/orphan_process.py"),
+            str(pids),
+            str(exit_code),
+        ]
+        if exit_code:
+            with pytest.raises(RuntimeError, match="local"):
+                manager.command("fault-test", args, folder, "fault")
+        else:
+            manager.command("fault-test", args, folder, "fault")
+        known = json.loads(pids.read_text())
+        assert all(not psutil.pid_exists(pid) for pid in known.values())
+        assert unrelated.poll() is None
+        assert (folder / "fault.resources.json").is_file()
+    finally:
+        manager.shutdown()
+        if pids.exists():
+            known = json.loads(pids.read_text())
+        for pid in known.values():
+            try:
+                psutil.Process(pid).kill()
+            except psutil.NoSuchProcess:
+                pass
+        if unrelated.poll() is None:
+            root = psutil.Process(unrelated.pid)
+            for process in [*reversed(root.children(recursive=True)), root]:
+                try:
+                    process.kill()
+                except psutil.NoSuchProcess:
+                    pass
+        unrelated.wait(timeout=10)

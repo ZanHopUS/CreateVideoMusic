@@ -3,9 +3,11 @@
 import ctypes
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
+import zipfile
 from ctypes import wintypes
 from pathlib import Path
 
@@ -32,13 +34,31 @@ def main():
     evidence.mkdir(parents=True)
     unicode_folder = evidence / "Thu muc — tiếng Việt"
     unicode_folder.mkdir()
+    package_file = unicode_folder / "Dự án thử.amvs"
+    with zipfile.ZipFile(package_file, "w") as archive:
+        archive.writestr("picker-only.txt", "native file filter fixture; not project restore")
+    from test_assets import prepare
+
+    prepare()
+    media_file = unicode_folder / "Ảnh gốc.png"
+    shutil.copyfile(ROOT / ".local/test-assets/artwork.png", media_file)
     results = []
-    for action in ["cancel", "select"]:
+    for action in ["cancel", "select", "open-package", "relink-media"]:
         env = dict(
             os.environ, AMVS_PICKER_INITIAL_DIR=str(unicode_folder), PYTHONIOENCODING="utf-8"
         )
         child = subprocess.Popen(
-            [sys.executable, str(ROOT / "services/local-api/amvs/picker.py")],
+            [
+                sys.executable,
+                str(ROOT / "services/local-api/amvs/picker.py"),
+                *(
+                    ["--open"]
+                    if action == "open-package"
+                    else ["--media"]
+                    if action == "relink-media"
+                    else []
+                ),
+            ],
             cwd=ROOT,
             env=env,
             stdout=subprocess.PIPE,
@@ -82,6 +102,14 @@ def main():
             if action == "cancel":
                 user.PostMessageW(dialog, 0x0010, 0, 0)
             else:
+                if action in {"open-package", "relink-media"}:
+                    target = package_file if action == "open-package" else media_file
+                    edit = user.GetDlgItem(dialog, 1148) or user.GetDlgItem(dialog, 1152)
+                    if not edit:
+                        raise RuntimeError("Owned file dialog has no filename control")
+                    # WM_SETTEXT only to the PID-owned filename control, no keyboard.
+                    buffer = ctypes.create_unicode_buffer(str(target))
+                    user.SendMessageW(edit, 0x000C, 0, ctypes.cast(buffer, ctypes.c_void_p).value)
                 button = user.GetDlgItem(dialog, 1)
                 if not button:
                     raise RuntimeError("Owned dialog has no Select control")
@@ -93,9 +121,16 @@ def main():
             if action == "cancel":
                 assert result["path"] is None, result
             else:
-                assert Path(result["path"]).resolve() == unicode_folder.resolve(), result
+                expected = (
+                    package_file
+                    if action == "open-package"
+                    else media_file
+                    if action == "relink-media"
+                    else unicode_folder
+                )
+                assert Path(result["path"]).resolve() == expected.resolve(), result
             results.append(
-                {"action": action, "passed": True, "unicode_path_selected": action == "select"}
+                {"action": action, "passed": True, "unicode_path_selected": action != "cancel"}
             )
         finally:
             if child.poll() is None:

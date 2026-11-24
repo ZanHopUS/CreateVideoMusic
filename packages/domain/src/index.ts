@@ -87,7 +87,14 @@ export function validateProject(
   if (new Set(p.lyrics.map((l) => l.id)).size !== p.lyrics.length)
     throw new Error('Lyric ID trùng.');
   for (const line of p.lyrics) {
-    if (line.sourceEndTicks <= line.sourceStartTicks)
+    if (
+      line.sourceAudioItemId &&
+      !p.items.some(
+        (i) => i.id === line.sourceAudioItemId && i.type === 'audio',
+      )
+    )
+      throw new Error('Nguồn lời không tồn tại.');
+    if (!line.text.trim() || line.sourceEndTicks <= line.sourceStartTicks)
       throw new Error('Thời gian lyrics không hợp lệ.');
     let previous = line.sourceStartTicks;
     for (const word of line.words) {
@@ -169,6 +176,7 @@ export function newMusicCardProject(id: string): ProjectContent {
     {
       ...project.items[0],
       id: 'song-title',
+      role: 'song-title',
       text: 'Tên bài hát',
       startTicks: 0,
       style: {
@@ -182,6 +190,7 @@ export function newMusicCardProject(id: string): ProjectContent {
     {
       ...project.items[0],
       id: 'artist-name',
+      role: 'artist-name',
       text: 'Tên nghệ sĩ',
       startTicks: 0,
       style: {
@@ -216,6 +225,15 @@ export class History {
     this.current = next;
     this.future = [];
   }
+  assetPins(): string[] {
+    return [
+      ...new Set(
+        [...this.past, this.current, ...this.future].flatMap(
+          (p) => p.assetRefs,
+        ),
+      ),
+    ];
+  }
   undo() {
     const p = this.past.pop();
     if (!p) return false;
@@ -231,3 +249,13 @@ export class History {
     return true;
   }
 }
+
+export {
+  parseLyrics,
+  remapLyrics,
+  applyLyrics,
+  newLyricsProject,
+  PRESETS,
+  type LyricLine,
+  type LyricDraft,
+} from './lyrics';

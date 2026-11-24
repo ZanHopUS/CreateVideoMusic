@@ -634,3 +634,83 @@ footer {
   font-size: 13px;
   max-width: 310px;
 }
+
+.tool-panel {
+  margin: 12px 0;
+  padding: 16px;
+  background: #171d2d;
+  border: 1px solid #36405a;
+  border-radius: 12px;
+}
+.tool-panel summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.tool-panel label {
+  display: block;
+  margin: 8px 0;
+}
+.tool-panel textarea {
+  width: 100%;
+  min-height: 64px;
+}
+.tool-panel select {
+  max-width: 100%;
+}
+.tool-panel button {
+  margin: 4px;
+}
+.lyrics-rows {
+  max-height: 380px;
+  overflow: auto;
+}
+.lyrics-rows fieldset {
+  border: 1px solid #36405a;
+  margin: 8px 0;
+}
+
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+  max-height: 420px;
+  overflow: auto;
+}
+.library-grid article {
+  padding: 8px;
+  border: 1px solid #36405a;
+  border-radius: 8px;
+  min-width: 0;
+}
+.library-grid strong,
+.library-grid small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.tool-panel audio {
+  width: 100%;
+  max-width: 260px;
+}
+
+.timeline-scroll {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.inspector input[type='checkbox'] {
+  width: auto;
+  padding: 0;
+  margin-right: 8px;
+}
+
+.track-label {
+  width: 90px;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--muted);
+}
+.track-label button {
+  padding: 0 5px;
+  font-size: 10px;
+  margin: 0 2px 0 0;
+}

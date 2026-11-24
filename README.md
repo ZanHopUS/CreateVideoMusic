@@ -1,62 +1,62 @@
 # AI Music Video Studio
 
-Studio video âm nhạc local trên Windows 11, giao diện tiếng Việt. Kiến trúc đã được
-duyệt; hiện có **bản nội bộ TPL-01**: nhập nhiều ảnh/video/nhạc → caption/timeline → preview →
-lưu/mở project → xuất MP4 thật. Chưa hoàn tất MVP Core; Lyrics AI, Music Card và
-các chức năng S2–S6 vẫn đang phát triển.
+Studio video âm nhạc local trên Windows 11, giao diện tiếng Việt. Đã có luồng dựng
+nhiều ảnh/video/nhạc, ba template, lyrics nhập/duyệt, worker AI local, lưu/mở,
+recovery, portable và thư viện/mẫu cá nhân. **Chưa hoàn tất MVP Core hoặc S6**:
+đã chạy ma trận render và AI local thật; chất lượng lyrics, listening và các
+release gates vẫn cần nghiệm thu theo báo cáo liên kết dưới đây.
+
+[Kết quả và giới hạn hiện tại](docs/planning/S2_S6_RESULTS.md) ·
+[Kế hoạch](docs/planning/S2_S6_EXECUTION.md) ·
+[RTM](RTM_v1.0.md) · [Contracts](docs/architecture/MVP_CONTRACTS.md)
 
 ## Chạy trên máy
 
-Cần Node **24.14.1+ trong nhánh 24.x**, Python **3.12**, Windows 11. Mở PowerShell tại
-repository root. Lần đầu setup cần mạng để tải dependencies và browser render;
-không tự tải model AI hoặc gửi media lên cloud.
+Node **24.14.1+ trong nhánh 24.x**, Python **3.12**, Windows 11. Setup lần đầu cần
+mạng cho dependency/browser; không tự tải model hoặc gửi media lên AI cloud.
 
 ```powershell
 ./scripts/setup.ps1
 ./scripts/start.ps1
 ```
 
-Setup dùng `python` trên PATH; có thể truyền `-Python <đường-dẫn-python.exe>` nếu
-máy có nhiều bản. `./scripts/setup.ps1 -CheckOnly` kiểm versions mà không cài gì.
+Máy hiện tại đã setup. Launcher chọn ports trên `127.0.0.1`, giữ session ở memory,
+Ctrl+C dọn owned processes. `start.ps1 -Restart` mở lại phiên, `stop.ps1` dừng đúng
+launcher, giữ media/project. Không sync live SQLite/temp lên Drive.
 
-Máy hiện tại đã được setup. Launcher tự chọn ports trên `127.0.0.1`, mở browser
-với session tạm, không in/lưu token. Giữ terminal chạy; **Ctrl+C** để dừng UI/API
-và owned children. Launcher dùng Windows Job Object để API/Next không tồn tại
-khi launcher đóng đột ngột; mutex chặn mở hai phiên cùng workspace. Session ở
-memory; nếu reload/mất session, mở phiên mới bằng `./scripts/start.ps1 -Restart`.
-`./scripts/stop.ps1` dừng đúng launcher theo PID/create-time/cwd đã xác minh;
-không dừng browser hay ứng dụng khác, không xóa dữ liệu project.
+## Các luồng sử dụng
 
-## Thử luồng đầu tiên
+1. Chọn Ảnh + Caption, Music Card hoặc Lyrics Video; xác nhận quyền dùng media,
+   nhập PNG/JPEG, MP4 H.264 và WAV PCM16/MP3/M4A AAC. Một batch thêm nhiều file;
+   file lỗi báo riêng, clip đã chỉnh được giữ. Project tối đa 300s.
+2. Chọn/kéo/sắp xếp/trim clip; chỉnh fit, vùng cắt, blur, brightness, font/màu/
+   viền/shadow và hiệu ứng. Undo/Redo, playhead/seek/zoom; preview dùng shared scene.
+   Video nền tắt âm thanh gốc, nhạc dùng clip riêng.
+3. Lyrics: nhập LRC/SRT hoặc câu có mốc nguồn; có thể nhận dạng/căn từ local khi
+   model đã chuẩn bị. Sửa, **Lưu bản nháp lời vào project**, duyệt rồi **Áp dụng lời
+   đã duyệt**. Mốc theo bài hát nguồn, ánh xạ qua trim/rate. Kết quả AI cần review;
+   [cấu hình và giới hạn AI](docs/planning/LOCAL_AI_SETUP.md).
+4. **Lưu project** tạo checkpoint JSON phụ thuộc thư viện local; không chuyển PC
+   bằng JSON riêng. Working save không xóa dirty-state. Trong **Dữ liệu project**
+   có recovery riêng (30s, tối đa 10 bản/200 MiB), restore có xác nhận, kiểm/relink
+   file gốc cùng SHA và **Đóng gói di chuyển (.amvs)** chứa project + media.
+   Mở `.amvs` bằng **Mở file project đã lưu**; restore không ghi đè project đã có.
+5. **Thư viện media** tìm theo tên/tags, thumbnail/nghe/dùng lại; gợi ý đoạn dựa trên
+   năng lượng, không nhận biết mood/đoạn hay. **Mẫu cá nhân** lưu typed placeholders
+   từ project và tạo instance với media/chữ mới, không sửa mẫu gốc.
+6. **Xuất video** chọn 720/1080p, 30/60 FPS, dọc/ngang/vuông và folder. Các preset
+   đã có UI/backend nhưng **chưa nghiệm thu đủ matrix output mới**. Admission giữ
+   RAM trống ≥4 GiB/10 samples, có chờ/hủy/retry; không coi chờ RAM là render pass.
+   Chỉ một heavy job AI/render tại một thời điểm.
 
-**Music Card (TPL-02):** từ dashboard chọn Music Card, nhập hai ảnh (ảnh đầu
-làm đoạn mở, ảnh thứ hai là bìa thẻ) và một file nhạc. Đổi tên bài/nghệ sĩ trong
-panel Thuộc tính. Thẻ và thanh tiến trình dùng cùng scene cho preview/MP4;
-hiện chỉ xuất preset dọc 720×1280/30 FPS. Chọn/đảo thứ tự clip có thể thay đổi
-ảnh bìa; kiểm preview trước khi xuất.
+Một tab ghi/project; tab khác chỉ đọc và có nút nhận quyền rõ ràng. Lease ở memory,
+heartbeat 5s/expiry 30s. Takeover nạp state mới nhất; không tự ghi đè bản ở tab khác.
 
-1. Chọn **Tạo video mới**. Xác nhận quyền dùng media, chọn nhiều PNG/JPEG, MP4
-   H.264 và WAV PCM16/MP3/M4A AAC trong một lần nhập. Batch đầu chia thời lượng
-   hình ảnh/video theo project và giới hạn nguồn; nhập thêm nối clip, không thay
-   clip đã chỉnh, tự tăng độ dài khi cần (tối đa 300s).
-2. Chỉnh caption, vị trí/thời lượng clip, đoạn nguồn nhạc, âm lượng; Undo/Redo và
-   preview. Video nền tắt âm thanh gốc, dùng các clip nhạc riêng. Chọn clip để
-   đổi fit, trim, xếp trước/sau hoặc gỡ; đổi thứ tự xếp liền các clip trong track,
-   giữ source cuts. Gỡ clip không xóa file trong thư viện; Undo/Redo khôi phục được.
-   Project tối đa 300s, nhưng app mới E2E với fixtures 2–3s.
-3. **Lưu project** mở native folder picker. Checkpoint JSON phụ thuộc thư viện
-   media local; **chưa là portable package**, không chuyển máy bằng JSON riêng.
-4. **Xuất video** chọn folder xuất. Preset hiện có: **720×1280, 30FPS, H.264/AAC**.
-   Job chờ 10 mẫu RAM trống ≥4 GiB trước khi chạy; có progress/hủy/thử lại.
-
-SQLite/media/job temp ở `.local/workspace/`, không đưa vào Git. SQLite/temp không
-upload lên Drive; media/project/MP4 có thể sao lưu qua mục **Kho Google Drive**.
-Xem [thiết lập Drive trực tiếp](docs/planning/DIRECT_DRIVE_SETUP.md): cần OAuth
-client riêng, chưa kiểm chứng cloud thật và chưa tự đồng bộ/restore.
-Working
-state lưu nền không thay thế manual save; dirty indicator vẫn báo chưa lưu thủ
-công. TPL-02/03, recovery UI, portable/Drive, AI và presets khác chưa được công bố
-hoàn tất. Dữ liệu/media cá nhân chỉ dùng khi có quyền sử dụng.
+**Kho Google Drive** là opt-in storage riêng, không bật AI cloud. Có backup/restore,
+tùy chọn tự sao lưu mặc định tắt; xem [thiết lập và phạm vi evidence](docs/planning/DIRECT_DRIVE_SETUP.md).
+Không xóa local sau upload. `.local/workspace` chứa SQLite/library/jobs; không đưa
+media, credentials hoặc raw private evidence vào Git. Dọn temp cần xem trước/xác nhận,
+chỉ xóa bản tạm của job terminal; source library và output đích được giữ.
 
 ## Kiểm tra phát triển
 
@@ -67,23 +67,15 @@ npm.cmd test
 npm.cmd run format:check
 ./.venv-api/Scripts/ruff.exe check services/local-api scripts tests
 ./.venv-api/Scripts/python.exe -m pytest tests/integration -q
-npm.cmd run test:e2e
-./.venv-api/Scripts/python.exe scripts/verify_e2e.py
-./.venv-api/Scripts/python.exe scripts/dev.py --smoke
+npm.cmd run test:e2e -- tests/e2e/core-workflows.spec.ts tests/e2e/drive-settings.spec.ts
+./.venv-api/Scripts/python.exe scripts/verify_core.py --matrix --long-run --ai-smoke
 ```
 
-Browser E2E dùng media tự tạo và API/DB/renderer thật; riêng chọn folder OS được
-thay bằng grant của test server disposable. Native folder chọn/hủy/Unicode có
-helper riêng `scripts/check_native_picker.py` (chỉ điều khiển owned picker PID).
-Raw evidence ở `.local/e2e/`, `.local/native-picker/`, Git-ignored. E2E cần đủ RAM;
-admission chờ không được tính là render pass. Tests không phụ thuộc media `.poc/`.
+Browser suite trên kiểm workflow và UI, không thay render E2E hoặc model quality;
+AI transport fixture được ghi trong tên test. Suite render cũ: `npm.cmd run test:e2e`
+và `scripts/verify_e2e.py`, cần đủ RAM. Runner `verify_core.py` dùng API/renderer thật,
+media tự tạo/workspace disposable, ghi blocked riêng. Không hạ admission để tính pass.
+Native OS chooser trong browser test dùng fixture grant, khác native picker smoke.
 
-Source: `apps/web/`, `services/local-api/`, `packages/domain/`,
-`packages/composition/`, `workers/render/`; Python 4 spaces, TS/TSX 2 spaces;
-Ruff/Prettier, schema types sinh bằng `npm run types`. `poc/` là harness lịch sử,
-không được import vào ứng dụng.
-
-[MVP start/architecture](docs/MVP_START_HERE.md) ·
-[Trạng thái triển khai](docs/planning/MVP_IMPLEMENTATION_STATUS.md) ·
-[S2 nhiều media](docs/planning/S2_MEDIA_EDITOR_RESULTS.md) ·
-[Kết quả PoC](docs/technical-discovery/POC_STATUS.md).
+Nguồn: `apps/web`, `services/local-api`, `packages/domain`, `packages/composition`,
+`workers/render`. `poc/` là harness lịch sử, không được application import.

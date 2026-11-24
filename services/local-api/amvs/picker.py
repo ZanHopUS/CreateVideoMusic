@@ -15,10 +15,12 @@ def main():
             root.update()
             print(json.dumps({"tk": "available", "nativeDialogInteraction": "not-tested"}))
             return
-        if "--open" in sys.argv:
+        if "--open" in sys.argv or "--media" in sys.argv:
             selected = filedialog.askopenfilename(
                 title="Mở project đã lưu",
-                filetypes=[("Project AMVS", "*.amvs.json")],
+                filetypes=[("Media gốc", "*.*")]
+                if "--media" in sys.argv
+                else [("Project AMVS", "*.amvs.json *.amvs")],
                 parent=root,
                 initialdir=os.environ.get("AMVS_PICKER_INITIAL_DIR"),
             )

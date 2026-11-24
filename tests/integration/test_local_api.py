@@ -112,6 +112,7 @@ def test_failed_publish_preserves_old_manual(server, project, tmp_path, monkeypa
     with pytest.raises(OSError):
         store.save(project["id"], changed, 2, tmp_path)
     assert target.read_bytes() == before and store.load(project["id"])["dirty"]
+    assert not list(tmp_path.glob("*.stage"))
 
 
 def test_bad_grant_rejected_and_deletion_preserves_library(server, project):

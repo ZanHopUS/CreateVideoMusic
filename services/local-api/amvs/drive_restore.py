@@ -6,9 +6,9 @@ import tempfile
 import threading
 from pathlib import Path
 
-from .domain import canonical, content_hash, parse_json, validate
+from .domain import canonical, content_hash, parse_json, validate, validate_template
 from .drive import API, DriveError
-from .store import contained, digest_file
+from .store import contained, digest_file, validate_view
 
 
 class DriveRestore:
@@ -122,6 +122,7 @@ class DriveRestore:
                     )
                 ):
                     raise DriveError("Media inventory không hợp lệ.")
+                self.store.pin_assets([id])
                 meta = self.drive.request(
                     "GET",
                     API + "/" + asset["fileId"],
@@ -181,8 +182,16 @@ class DriveRestore:
                     or set(envelope.get("assets", {})) != set(project["assetRefs"])
                 ):
                     raise DriveError("Nội dung project không khớp manifest.")
+                if not set(project["assetRefs"]) <= set(recovered):
+                    raise DriveError("Project tham chiếu media ngoài manifest.")
                 validate(project, {**catalog, **recovered})
-                rows.append((project, envelope.get("view", {}), entry["contentHash"]))
+                validate_view(envelope.get("view", {}))
+                saved_hash = envelope.get("manualSavedHash")
+                if saved_hash is not None and (
+                    not isinstance(saved_hash, str) or not re.fullmatch(r"[a-f0-9]{64}", saved_hash)
+                ):
+                    raise DriveError("Manual hash không hợp lệ.")
+                rows.append((project, envelope.get("view", {}), saved_hash))
             restored_exports = []
             local_exports = contained(self.store.root / "exports", self.store.root)
             local_exports.mkdir(exist_ok=True)
@@ -209,6 +218,45 @@ class DriveRestore:
                 source = stage / ("export-" + sha + ".mp4")
                 self.drive.download(entry["fileId"], source, entry["bytes"], entry["md5"], sha)
                 restored_exports.append((source, target))
+            templates = manifest.get("templates", [])
+            if not isinstance(templates, list) or len(templates) > 1000:
+                raise DriveError("Template inventory không hợp lệ.")
+            template_rows = []
+            if templates:
+                template_folder = self.drive.child_folder(self.drive.data["folder"], "Templates")
+                for entry in templates:
+                    if (
+                        not re.fullmatch(r"[a-f0-9]{32}", entry.get("id", ""))
+                        or not re.fullmatch(r"[a-f0-9]{64}", entry.get("sha256", ""))
+                        or not isinstance(entry.get("bytes"), int)
+                        or not 0 < entry["bytes"] <= 16 * 1024**2
+                    ):
+                        raise DriveError("Template descriptor không hợp lệ.")
+                    meta = self.drive.request(
+                        "GET",
+                        API + "/" + entry["fileId"],
+                        headers=self.drive.auth(),
+                        params={"fields": "parents,trashed,size"},
+                    ).json()
+                    if (
+                        meta.get("trashed")
+                        or template_folder not in meta.get("parents", [])
+                        or int(meta.get("size", -1)) != entry["bytes"]
+                    ):
+                        raise DriveError("Template không còn trong kho.")
+                    path = stage / (entry["id"] + ".template.json")
+                    self.drive.download(
+                        entry["fileId"], path, entry["bytes"], entry["md5"], entry["sha256"]
+                    )
+                    template = parse_json(path.read_bytes())
+                    validate_template(template)
+                    if not set(template["defaultProject"]["assetRefs"]) <= set(recovered):
+                        raise DriveError("Template tham chiếu media ngoài manifest.")
+                    validate(template["defaultProject"], {**catalog, **recovered})
+                    if template["id"] != entry["id"]:
+                        raise DriveError("Template ID không khớp.")
+                    template_rows.append(template)
+            self.store.pin_assets(recovered.keys())
             published = []
             try:
                 for id, asset in recovered.items():
@@ -233,6 +281,11 @@ class DriveRestore:
                     for id, asset in recovered.items():
                         db.execute(
                             "INSERT OR IGNORE INTO assets VALUES(?,?)", (id, json.dumps(asset))
+                        )
+                    for template in template_rows:
+                        db.execute(
+                            "INSERT OR IGNORE INTO templates VALUES(?,?)",
+                            (template["id"], json.dumps(template)),
                         )
                     for project, view, hash in rows:
                         if db.execute(

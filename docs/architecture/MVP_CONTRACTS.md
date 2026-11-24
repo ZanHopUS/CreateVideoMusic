@@ -2,7 +2,18 @@
 
 Ngày: **23/11/2026**. Status: **Accepted** theo xác nhận “duyệt theo đề xuất”, cùng
 [ADR-0001](../decisions/ADR-0001-LOCAL_MVP_ARCHITECTURE.md). Đây là design contract,
-chưa là schema/code chạy được. Tên API/fields bên dưới là mục tiêu triển khai S0–S6.
+đã có triển khai một phần; trạng thái/evidence xem [S2–S6](../planning/S2_S6_RESULTS.md).
+Các fields/API dưới đây vẫn là contract mục tiêu, không mặc định toàn bộ đã nghiệm thu.
+
+Ghi chú triển khai 24/11: schema v1 bổ sung optional `sourceAudioItemId` để remap
+lyrics theo clip nhạc, `role` cho metadata Music Card khi clone với IDs mới, cùng
+style fields cơ bản. Dữ liệu cũ vẫn đọc được. Editor lease chỉ ở memory, heartbeat
+5s/expiry 30s; tab khác chỉ đọc/takeover rõ ràng. Portable có manifest.json,
+project.json và assets; source GC có preview/chọn/xác nhận, xét pins của working,
+manual, legacy, recovery, template, job và lịch sử phiên. Manual/legacy pins giữ
+bảo thủ, không tự thu hồi. Cache quota chỉ áp dụng generated thumbnails, không
+xóa source để đạt quota. ASR/alignment local và 36 preset outputs đã chạy thật;
+quality/listening và acceptance đầy đủ vẫn theo báo cáo S2–S6.
 
 ## 1. Versioning và timeline canonical
 

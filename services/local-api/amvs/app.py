@@ -8,6 +8,7 @@ import os
 import re
 import sys
 import uuid
+import zipfile
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -15,12 +16,18 @@ import av
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 
+from .catalog import Catalog
 from .domain import ROOT, parse_json
 from .drive import Drive, DriveError
 from .drive_backup import DriveBackup
 from .drive_restore import DriveRestore
-from .jobs import Jobs
+from .edit_leases import EditLeases
+from .jobs import Jobs, RenderInputError
 from .media import probe
+from .providers import PROVIDERS, AIUnavailable
+from .snapshots import Snapshots
+from .source_gc import SourceGC
+from .storage_policy import StorageQuota
 from .store import Conflict, Store, contained
 
 
@@ -34,7 +41,10 @@ async def body(request):
         content.extend(chunk)
         if len(content) > 16 * 1024**2:
             raise BudgetExceeded("Dữ liệu vượt giới hạn 16 MiB.")
-    return parse_json(content)
+    value = parse_json(content)
+    if not isinstance(value, dict):
+        raise ValueError("Body phải là JSON object.")
+    return value
 
 
 def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=4):
@@ -48,20 +58,28 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
     drive = Drive(store.root)
     drive_backup = DriveBackup(drive, store)
     drive_restore = DriveRestore(drive, store)
+    snapshots = Snapshots(store)
+    catalog = Catalog(store)
+    source_gc = SourceGC(store)
+    leases = EditLeases()
     grants = {}
     picker_lock = asyncio.Lock()
     drive_control = asyncio.Lock()
 
     @asynccontextmanager
     async def lifespan(_):
+        snapshots.start()
         drive_backup.start_monitor()
         yield
+        await asyncio.to_thread(snapshots.close)
         await asyncio.to_thread(jobs.shutdown)
         await asyncio.to_thread(drive_backup.close)
         await asyncio.to_thread(drive_restore.close)
         await asyncio.to_thread(drive.close)
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app.state.snapshots = snapshots
+    app.state.catalog = catalog
     app.state.store = store
     app.state.jobs = jobs
     app.state.grants = grants
@@ -82,7 +100,7 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
         header = request.headers.get("authorization", "")
         auth = header[7:] if header.startswith("Bearer ") else ""
         media = request.method in {"GET", "HEAD"} and re.fullmatch(
-            r"/api/v1/(assets/[a-f0-9]{64}/content|outputs/[a-f0-9]{32}|drive/exports/[a-f0-9]{64})",
+            r"/api/v1/(assets/[a-f0-9]{64}/(?:content|thumbnail)|outputs/[a-f0-9]{32}|drive/exports/[a-f0-9]{64})",
             request.url.path,
         )
         if not auth and media:
@@ -91,9 +109,24 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
             return JSONResponse({"code": "SESSION", "message": "Phiên làm việc đã hết hạn."}, 401)
         try:
             response = await call_next(request)
+        except RenderInputError as error:
+            return JSONResponse({"code": "RENDER_INPUT", "message": str(error)}, 422)
+        except StorageQuota as error:
+            return JSONResponse({"code": "STORAGE_QUOTA", "message": str(error)}, 507)
+        except AIUnavailable as error:
+            return JSONResponse({"code": "AI_UNAVAILABLE", "message": str(error)}, 422)
         except DriveError as error:
             return JSONResponse({"code": "DRIVE", "message": str(error)}, 409)
-        except (ValueError, KeyError, PermissionError, FileNotFoundError, Conflict) as error:
+        except (
+            ValueError,
+            KeyError,
+            PermissionError,
+            FileNotFoundError,
+            Conflict,
+            zipfile.BadZipFile,
+            TypeError,
+            av.FFmpegError,
+        ) as error:
             status = (
                 413
                 if isinstance(error, BudgetExceeded)
@@ -136,7 +169,7 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
                 "scope": "local",
                 "cloudEnabled": False,  # Cloud AI remains disabled; Drive is separate opt-in storage.
                 "driveConnected": drive.status()["connected"],
-                "templates": ["TPL-01"],
+                "templates": ["TPL-01", "TPL-02", "TPL-03"],
                 "maxUploadBytes": 2 * 1024**3,
             }
         )
@@ -238,11 +271,11 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
             raise FileNotFoundError("MP4 chưa khôi phục.")
         return FileResponse(file, media_type="video/mp4", filename=file.name)
 
-    async def choose(open_file=False):
+    async def choose(open_file=False, media=False):
         async with picker_lock:
             args = [sys.executable, str(ROOT / "services/local-api/amvs/picker.py")]
             if open_file:
-                args.append("--open")
+                args.append("--media" if media else "--open")
             process = await asyncio.create_subprocess_exec(
                 *args,
                 stdout=asyncio.subprocess.PIPE,
@@ -294,6 +327,8 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
         selected = await choose(True)
         if not selected:
             return {"cancelled": True}
+        if str(selected).endswith(".amvs"):
+            return await asyncio.to_thread(snapshots.import_package, Path(selected))
         return await asyncio.to_thread(store.open_manual, Path(selected))
 
     @app.get("/api/v1/projects")
@@ -308,16 +343,42 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
     def load(id: str):
         return store.load(id)
 
+    @app.post("/api/v1/projects/{id}/editor-session")
+    async def editor_session(id: str, request: Request):
+        store.load(id)
+        data = await body(request)
+        if set(data) - {"assetPins", "pinAllAssets"} != {"takeover"} or not isinstance(
+            data["takeover"], bool
+        ):
+            raise ValueError("Trường không hợp lệ.")
+        pins = data.get("assetPins", [])
+        if (
+            not isinstance(pins, list)
+            or len(pins) > 4096
+            or any(not isinstance(p, str) or not re.fullmatch(r"[a-f0-9]{64}", p) for p in pins)
+            or not isinstance(data.get("pinAllAssets", False), bool)
+        ):
+            raise ValueError("History pins không hợp lệ.")
+        lease = leases.claim(id, request.headers.get("x-amvs-editor"), data["takeover"])
+        if lease["canWrite"]:
+            store.pin_assets(store.assets().keys() if data.get("pinAllAssets") else pins)
+        return lease
+
+    @app.delete("/api/v1/projects/{id}/editor-session")
+    def release_editor(id: str, request: Request):
+        return leases.release(id, request.headers.get("x-amvs-editor"))
+
     @app.patch("/api/v1/projects/{id}")
     async def update(id: str, request: Request):
         data = await body(request)
         if set(data) - {"project", "revision", "view"}:
             raise ValueError("Trường không hợp lệ.")
-        return store.update(id, data["project"], data["revision"], data.get("view"))
+        with leases.guard(id, request.headers.get("x-amvs-editor")):
+            return store.update(id, data["project"], data["revision"], data.get("view"))
 
     @app.delete("/api/v1/projects/{id}")
-    def delete(id: str):
-        with store.connect() as db:
+    def delete(id: str, request: Request):
+        with leases.guard(id, request.headers.get("x-amvs-editor")), store.connect() as db:
             db.execute("DELETE FROM projects WHERE id=?", (id,))
         return {"deleted": True, "sharedAssetsPreserved": True}
 
@@ -326,9 +387,132 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
         data = await body(request)
         if set(data) - {"project", "revision", "grantId"}:
             raise ValueError("Trường không hợp lệ.")
-        return await asyncio.to_thread(
-            store.save, id, data["project"], data["revision"], folder(data["grantId"], "project")
-        )
+        editor = request.headers.get("x-amvs-editor")
+        destination = folder(data["grantId"], "project")
+
+        def save_owned():
+            # Recheck in the thread doing the write; a queued operation cannot
+            # retain permission after another tab has taken over.
+            with leases.guard(id, editor):
+                return store.save(id, data["project"], data["revision"], destination)
+
+        return await asyncio.to_thread(save_owned)
+
+    @app.get("/api/v1/projects/{id}/recoveries")
+    def recoveries(id: str):
+        return {"snapshots": snapshots.list(id), "warning": snapshots.warning}
+
+    @app.post("/api/v1/projects/{id}/recoveries")
+    def capture_recovery(id: str):
+        return snapshots.capture(id)
+
+    @app.post("/api/v1/projects/{id}/restore")
+    async def restore_recovery(id: str, request: Request):
+        data = await body(request)
+        if set(data) != {"recoveryId", "revision", "confirmed"} or data["confirmed"] is not True:
+            raise ValueError("Cần xác nhận recovery.")
+        with leases.guard(id, request.headers.get("x-amvs-editor")):
+            return snapshots.restore(id, data["recoveryId"], data["revision"])
+
+    @app.delete("/api/v1/projects/{id}/recoveries")
+    async def clear_recovery(id: str, request: Request):
+        data = await body(request)
+        if set(data) != {"ids", "confirmed"} or data["confirmed"] is not True:
+            raise ValueError("Cần xác nhận dọn recovery.")
+        with leases.guard(id, request.headers.get("x-amvs-editor")):
+            return snapshots.clear(id, data["ids"])
+
+    @app.post("/api/v1/projects/{id}/packages")
+    async def package_project(id: str, request: Request):
+        data = await body(request)
+        if set(data) != {"revision", "grantId"}:
+            raise ValueError("Trường không hợp lệ.")
+        current = store.load(id)
+        if current["revision"] != data["revision"]:
+            raise Conflict("Revision cũ.")
+        return JSONResponse(jobs.start_package(current, folder(data["grantId"], "backup")), 202)
+
+    @app.get("/api/v1/projects/{id}/media-status")
+    def media_status(id: str):
+        current = store.load(id)
+        assets = store.assets()
+        missing = []
+        from .store import digest_file
+
+        for key in current["project"]["assetRefs"]:
+            try:
+                if digest_file(store.asset_path(assets[key])) != key:
+                    missing.append(key)
+            except (OSError, KeyError):
+                missing.append(key)
+        return {"missing": missing}
+
+    @app.post("/api/v1/assets/{id}/relink")
+    async def relink(id: str, request: Request):
+        data = await body(request)
+        if data != {"confirmed": True} or id not in store.assets():
+            raise ValueError("Cần xác nhận relink media.")
+        selected = await choose(True, True)
+        if not selected:
+            return {"cancelled": True}
+        from .store import digest_file
+
+        source = Path(selected)
+        if (
+            source.stat().st_size > 2 * 1024**3
+            or await asyncio.to_thread(digest_file, source) != id
+        ):
+            raise ValueError("File phải có cùng checksum với media gốc.")
+        asset = store.assets()[id]
+        library = contained(store.root / "library", store.root)
+        target = contained(library / asset["file"], library)
+        stage = contained(library / (uuid.uuid4().hex + ".stage"), library)
+        import shutil
+
+        try:
+            await asyncio.to_thread(shutil.copyfile, source, stage)
+            if digest_file(stage) != id:
+                raise ValueError("Nguồn đã thay đổi khi copy.")
+            os.replace(stage, target)
+        finally:
+            stage.unlink(missing_ok=True)
+        return {"relinked": True}
+
+    @app.get("/api/v1/templates")
+    def templates():
+        return catalog.templates()
+
+    @app.post("/api/v1/templates")
+    async def save_template(request: Request):
+        data = await body(request)
+        if set(data) != {"projectId", "revision", "name", "itemIds"}:
+            raise ValueError("Trường không hợp lệ.")
+        current = store.load(data["projectId"])
+        if current["revision"] != data["revision"]:
+            raise Conflict("Revision cũ.")
+        return catalog.save_template(current["project"], data["name"], data["itemIds"])
+
+    @app.post("/api/v1/templates/{id}/instances")
+    async def template_instance(id: str, request: Request):
+        data = await body(request)
+        if set(data) != {"bindings"}:
+            raise ValueError("Trường không hợp lệ.")
+        return catalog.instantiate(id, data["bindings"])
+
+    @app.patch("/api/v1/assets/{id}/tags")
+    async def asset_tags(id: str, request: Request):
+        data = await body(request)
+        if set(data) != {"tags"}:
+            raise ValueError("Trường không hợp lệ.")
+        return catalog.tags(id, data["tags"])
+
+    @app.get("/api/v1/assets/{id}/thumbnail")
+    def thumbnail(id: str):
+        return FileResponse(catalog.thumbnail(id), media_type="image/jpeg")
+
+    @app.post("/api/v1/assets/{id}/suggestions")
+    async def suggestions(id: str):
+        return await asyncio.to_thread(catalog.suggestions, id)
 
     @app.get("/api/v1/assets")
     def assets():
@@ -425,6 +609,98 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
             jobs.start(current["project"], folder(data["grantId"], "export")), status_code=202
         )
 
+    @app.get("/api/v1/storage/policy")
+    def storage_policy():
+        return catalog.storage.status()
+
+    @app.patch("/api/v1/storage/policy")
+    async def configure_storage(request: Request):
+        return catalog.storage.configure(await body(request))
+
+    @app.post("/api/v1/storage/cache/cleanup")
+    async def clear_cache(request: Request):
+        if await body(request) != {"confirmed": True}:
+            raise ValueError("Cần xác nhận dọn cache.")
+        return await asyncio.to_thread(catalog.storage.clear_cache)
+
+    @app.get("/api/v1/storage/source-gc")
+    def source_gc_preview():
+        return source_gc.preview()
+
+    @app.post("/api/v1/storage/source-gc")
+    async def source_gc_collect(request: Request):
+        data = await body(request)
+        if set(data) != {"ids", "confirmed"} or data["confirmed"] is not True:
+            raise ValueError("Cần xem danh sách và xác nhận xóa media.")
+        return await asyncio.to_thread(source_gc.collect, data["ids"])
+
+    @app.get("/api/v1/storage/temp")
+    def temp_inventory():
+        return {"jobs": jobs.temp_inventory(), "assetPolicy": "preserve-all-managed-source-assets"}
+
+    @app.post("/api/v1/storage/temp/cleanup")
+    async def temp_cleanup(request: Request):
+        data = await body(request)
+        if set(data) != {"ids", "confirmed"} or data["confirmed"] is not True:
+            raise ValueError("Cần xác nhận dọn temp.")
+        return await asyncio.to_thread(jobs.clean_temp, data["ids"])
+
+    @app.get("/api/v1/ai/providers")
+    def providers():
+        return {
+            "default": "local",
+            "providers": [p.status() for p in PROVIDERS.values()],
+            "cloudEgress": False,
+        }
+
+    @app.post("/api/v1/lyrics/jobs")
+    async def lyrics_job(request: Request):
+        data = await body(request)
+        if set(data) - {"provider"} != {
+            "projectId",
+            "revision",
+            "audioItemId",
+            "language",
+            "model",
+        }:
+            raise ValueError("Trường không hợp lệ.")
+        current = store.load(data["projectId"])
+        if current["revision"] != data["revision"]:
+            raise Conflict("Revision cũ.")
+        return JSONResponse(
+            jobs.start_asr(
+                current["project"],
+                data["audioItemId"],
+                data["language"],
+                data["model"],
+                provider_id=data.get("provider", "local"),
+            ),
+            202,
+        )
+
+    @app.post("/api/v1/lyrics/alignment")
+    async def alignment_job(request: Request):
+        data = await body(request)
+        if set(data) != {"projectId", "revision", "audioItemId", "language", "lines"}:
+            raise ValueError("Trường không hợp lệ.")
+        current = store.load(data["projectId"])
+        if current["revision"] != data["revision"]:
+            raise Conflict("Revision cũ.")
+        return JSONResponse(
+            jobs.start_asr(
+                current["project"], data["audioItemId"], data["language"], "small", data["lines"]
+            ),
+            202,
+        )
+
+    @app.get("/api/v1/jobs/{id}/package")
+    def package_result(id: str):
+        return jobs.package_result(id)
+
+    @app.get("/api/v1/jobs/{id}/lyrics")
+    def lyrics_result(id: str):
+        return jobs.lyrics_result(id)
+
     @app.get("/api/v1/jobs/{id}")
     def job(id: str):
         return jobs.public(id)
@@ -436,7 +712,7 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
     @app.get("/api/v1/outputs/{id}")
     def output(id: str):
         job = jobs.rows[id]
-        if job["status"] != "succeeded":
+        if job["status"] != "succeeded" or job["kind"] != "render":
             raise ValueError("Video chưa sẵn sàng.")
         target = contained(job["outputFile"], job["grant"])
         return FileResponse(target, media_type="video/mp4", filename=target.name)
@@ -444,7 +720,7 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
     @app.post("/api/v1/outputs/{id}/open-folder")
     def open_output(id: str):
         job = jobs.rows[id]
-        if job["status"] != "succeeded":
+        if job["status"] != "succeeded" or job["kind"] != "render":
             raise ValueError("Video chưa sẵn sàng.")
         target = contained(job["outputFile"], job["grant"])
         if os.name != "nt":

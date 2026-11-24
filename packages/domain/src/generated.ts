@@ -8,6 +8,7 @@ export type Item = {
   assetId?: Hash;
   text?: string;
   lyricId?: Id;
+  role?: 'song-title' | 'artist-name';
   startTicks: Tick;
   durationTicks: number;
   sourceStartTicks: Tick;
@@ -24,6 +25,15 @@ export type Item = {
     x?: number;
     y?: number;
     fit?: 'cover' | 'contain';
+    blur?: number;
+    brightness?: number;
+    cropX?: number;
+    cropY?: number;
+    strokeWidth?: number;
+    strokeColor?: string;
+    shadow?: boolean;
+    animation?: 'none' | 'fade' | 'slide' | 'scale';
+    highlightColor?: string;
   };
 };
 export type Hash = string;
@@ -64,6 +74,7 @@ export interface Lyric {
   source: 'user' | 'import' | 'asr' | 'aligner';
   status: 'draft' | 'reviewed';
   alignmentStatus: 'unknown' | 'sentence' | 'word';
+  sourceAudioItemId?: Id;
   words: {
     text: string;
     startTicks: Tick;

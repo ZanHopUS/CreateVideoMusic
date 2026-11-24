@@ -1,5 +1,8 @@
 # MVP Implementation Readiness
 
+Tiến độ hiện tại 24/11/2026: xem [kết quả S2–S6](planning/S2_S6_RESULTS.md).
+Các thông tin ngày 23/11 dưới đây là checkpoint lịch sử, không thay báo cáo mới.
+
 Ngày: **23/11/2026**. Trạng thái: **đã được Product Owner duyệt khởi công** qua
 “duyệt theo đề xuất”, gồm ADR/contracts và conditional entry S0 → S1.
 Ứng dụng đã có foundation và luồng TPL-01 nội bộ; baseline A–G giữ nguyên.

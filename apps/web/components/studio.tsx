@@ -7,14 +7,25 @@ import { useStudio } from '../hooks/use-studio';
 import { Timeline } from './timeline';
 import { Inspector } from './inspector';
 import { DrivePanel } from './drive-panel';
+import { LyricsPanel } from './lyrics-panel';
+import { ProjectTools } from './project-tools';
 export function Studio() {
   const rightsInput = useRef<HTMLInputElement>(null);
   const [uploadHint, setUploadHint] = useState('');
   const {
     apiClient,
+    refresh,
+    reloadFromServer,
+    zoom,
+    setZoom,
+    panels,
+    setPanel,
     prepareBackup,
     ready,
     message,
+    missingMedia,
+    writeAllowed,
+    takeOver,
     project,
     projects,
     selected,
@@ -35,6 +46,7 @@ export function Studio() {
     reorder,
     removeSelected,
     editItem,
+    moveClip,
     change,
     undo,
     redo,
@@ -47,10 +59,10 @@ export function Studio() {
     <div className="studio-shell">
       <aside className="navigation">
         <a className="brand" href="#">
-          <span>◈</span> hòa âm<small>VIDEO STUDIO</small>
+          <span>◈</span> hòa âm<small>VIDEO ÂM NHẠC</small>
         </a>
         <button className="nav-active">▦ Studio của tôi</button>
-        <div className="section-label">DỰ ÁN LOCAL</div>
+        <div className="section-label">DỰ ÁN TRÊN MÁY</div>
         {projects.map((p) => (
           <button
             key={p.id}
@@ -80,10 +92,16 @@ export function Studio() {
           <div className="actions">
             {project && (
               <>
-                <button disabled={busy} onClick={save}>
+                <button disabled={busy || !writeAllowed} onClick={save}>
                   Lưu project
                 </button>
-                <button className="primary" disabled={busy} onClick={render}>
+                <button
+                  className="primary"
+                  disabled={
+                    busy || !writeAllowed || Boolean(missingMedia.length)
+                  }
+                  onClick={render}
+                >
                   Xuất video ↗
                 </button>
               </>
@@ -121,9 +139,9 @@ export function Studio() {
               >
                 <div className="artwork">
                   <span>
-                    your
+                    khoảnh
                     <br />
-                    <i>moment.</i>
+                    <i>khắc.</i>
                   </span>
                   <b>♫</b>
                 </div>
@@ -144,7 +162,11 @@ export function Studio() {
                   <small>Hai ảnh, nhạc và thẻ bài hát.</small>
                 </div>
               </button>
-              <div className="template-card upcoming">
+              <button
+                className="template-card"
+                disabled={!ready || busy}
+                onClick={() => create('TPL-03')}
+              >
                 <div className="artwork third">
                   lời hát
                   <br />
@@ -152,9 +174,9 @@ export function Studio() {
                 </div>
                 <div>
                   <strong>Lyrics Video</strong>
-                  <small>Đang phát triển</small>
+                  <small>Nhập lời, duyệt và đồng bộ theo nhạc.</small>
                 </div>
-              </div>
+              </button>
             </div>
             <button
               className="text-button"
@@ -167,8 +189,22 @@ export function Studio() {
         ) : (
           <div className="editor-layout">
             <section className="editor-main">
+              {!writeAllowed && (
+                <p role="status">
+                  Tab này chỉ đọc.{' '}
+                  <button onClick={() => takeOver().catch(() => {})}>
+                    Nhận quyền chỉnh sửa
+                  </button>
+                </p>
+              )}
+              {Boolean(missingMedia.length) && (
+                <p role="alert">
+                  Có {missingMedia.length} media bị thiếu/hỏng. Mở Dữ liệu
+                  project để chọn lại file gốc; dữ liệu chỉnh sửa vẫn được giữ.
+                </p>
+              )}
               <div className="editor-toolbar">
-                <span>PREVIEW</span>
+                <span>XEM TRƯỚC</span>
                 <div>
                   <button aria-label="Hoàn tác" onClick={undo}>
                     ↶
@@ -177,7 +213,9 @@ export function Studio() {
                     ↷
                   </button>
                 </div>
-                <span>9:16</span>
+                <span>
+                  {project.preset.width} × {project.preset.height}
+                </span>
               </div>
               <div className="preview-stage">
                 <Player
@@ -187,17 +225,23 @@ export function Studio() {
                   durationInFrames={Math.ceil(
                     (project.durationTicks * project.preset.fps) / TICKS,
                   )}
-                  compositionWidth={720}
-                  compositionHeight={1280}
-                  fps={30}
-                  controls
+                  compositionWidth={project.preset.width}
+                  compositionHeight={project.preset.height}
+                  fps={project.preset.fps}
+                  controls={false}
                   style={{
                     height: '100%',
                     maxWidth: '100%',
-                    aspectRatio: '9/16',
+                    aspectRatio: `${project.preset.width}/${project.preset.height}`,
                   }}
                 />
               </div>
+              <button
+                aria-label="Phát hoặc tạm dừng"
+                onClick={() => player.current?.toggle()}
+              >
+                ▶ Phát / Tạm dừng
+              </button>
               <div className="import-bar">
                 <label className="rights">
                   <input
@@ -241,28 +285,77 @@ export function Studio() {
                   </span>
                 )}
               </div>
+              <ProjectTools
+                key={project.id + 'tools'}
+                project={project}
+                assets={assets}
+                api={apiClient}
+                prepare={prepareBackup}
+                open={open}
+                refresh={refresh}
+                reload={reloadFromServer}
+                change={change}
+                selected={selected}
+                panels={panels}
+                setPanel={setPanel}
+              />
+              <LyricsPanel
+                key={project.id}
+                project={project}
+                assets={assets}
+                api={apiClient}
+                change={change}
+                prepare={prepareBackup}
+                expanded={panels.lyrics ?? project.templateRef.id === 'TPL-03'}
+                toggle={(value) => setPanel('lyrics', value)}
+              />
               <Timeline
                 assets={assets}
+                change={change}
+                editable={writeAllowed}
+                zoom={zoom}
+                setZoom={setZoom}
+                player={player}
                 project={project}
                 selected={selected}
                 select={setSelected}
-                move={(id, start) =>
-                  change((p) => {
-                    p.items.find((i) => i.id === id)!.startTicks = start;
-                  })
-                }
+                move={moveClip}
                 seek={(frame) =>
                   player.current?.seekTo(
                     Math.min(
                       frame,
-                      Math.ceil((project.durationTicks * 30) / TICKS) - 1,
+                      Math.ceil(
+                        (project.durationTicks * project.preset.fps) / TICKS,
+                      ) - 1,
                     ),
                   )
                 }
               />
             </section>
             <Inspector
+              editable={writeAllowed}
               project={project}
+              preset={(value) =>
+                change((p) => {
+                  const previous = p.preset;
+                  for (const item of p.items) {
+                    if (!item.style) continue;
+                    if (item.style.x !== undefined)
+                      item.style.x *= value.width / previous.width;
+                    if (item.style.y !== undefined)
+                      item.style.y *= value.height / previous.height;
+                    if (item.style.fontSize !== undefined)
+                      item.style.fontSize = Math.min(
+                        300,
+                        Math.max(
+                          8,
+                          (item.style.fontSize * value.width) / previous.width,
+                        ),
+                      );
+                  }
+                  p.preset = value;
+                })
+              }
               item={project.items.find((i) => i.id === selected)}
               edit={editItem}
               assets={assets}
@@ -270,7 +363,7 @@ export function Studio() {
               remove={removeSelected}
               cardText={(id, text) =>
                 change((p) => {
-                  const item = p.items.find((i) => i.id === id);
+                  const item = p.items.find((i) => (i.role ?? i.id) === id);
                   if (item) item.text = text;
                 })
               }
@@ -283,7 +376,8 @@ export function Studio() {
                 change((p) => {
                   if (!Number.isFinite(seconds) || seconds < 1 || seconds > 300)
                     throw new Error('Độ dài phải từ 1 đến 300 giây.');
-                  p.durationTicks = (Math.round(seconds * 30) * TICKS) / 30;
+                  p.durationTicks =
+                    (Math.round(seconds * p.preset.fps) * TICKS) / p.preset.fps;
                   p.items = p.items.filter(
                     (i) => i.startTicks < p.durationTicks,
                   );

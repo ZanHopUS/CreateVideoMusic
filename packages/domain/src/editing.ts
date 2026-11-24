@@ -173,6 +173,15 @@ export function validateMediaWindows(
   catalog: MediaInfo[],
 ) {
   const assets = new Map(catalog.map((a) => [a.id, a]));
+  for (const line of project.lyrics) {
+    if (!line.sourceAudioItemId) continue;
+    const audio = project.items.find(
+      (i) => i.id === line.sourceAudioItemId && i.type === 'audio',
+    );
+    const asset = audio?.assetId ? assets.get(audio.assetId) : undefined;
+    if (!audio || !asset || line.sourceEndTicks > asset.durationTicks)
+      throw new Error('Mốc lời vượt nguồn nhạc hoặc clip nguồn bị thiếu.');
+  }
   for (const item of project.items) {
     if (!item.assetId) continue;
     const asset = assets.get(item.assetId);

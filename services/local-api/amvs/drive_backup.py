@@ -46,6 +46,7 @@ class DriveBackup:
                 list(db.execute("SELECT id,metadata FROM assets ORDER BY id")),
                 list(db.execute("SELECT id,body,view,revision FROM projects ORDER BY id")),
                 list(db.execute("SELECT id,body FROM jobs ORDER BY id")),
+                list(db.execute("SELECT id,body FROM templates ORDER BY id")),
             ]
         # Job progress changes should not trigger repeated cloud snapshots.
         jobs = [
@@ -56,7 +57,8 @@ class DriveBackup:
         payload = [
             list(map(tuple, rows[0])),
             list(map(tuple, rows[1])),
-            [(id, row.get("outputFile")) for id, row in jobs],
+            [(id, row.get("outputFile")) for id, row in jobs if row.get("kind") == "render"],
+            list(map(tuple, rows[3])),
         ]
         return hashlib.sha256(
             json.dumps(payload, ensure_ascii=False, sort_keys=True).encode()
@@ -97,7 +99,7 @@ class DriveBackup:
     def copy(self):
         fingerprint = self.inventory_fingerprint()
         # One SQLite read transaction captures a coherent inventory, never DB bytes.
-        with self.store.connect() as db:
+        with self.store.pin_lock, self.store.connect() as db:
             db.execute("BEGIN")
             catalog = {
                 r["id"]: parse_json(r["metadata"]) for r in db.execute("SELECT * FROM assets")
@@ -112,6 +114,8 @@ class DriveBackup:
                 for r in db.execute("SELECT * FROM projects")
             ]
             jobs = [parse_json(r["body"]) for r in db.execute("SELECT * FROM jobs")]
+            templates = [parse_json(r["body"]) for r in db.execute("SELECT * FROM templates")]
+            self.store.pin_assets(catalog.keys())
         for row in projects:
             validate(row["project"], catalog)
             row["contentHash"] = content_hash(row["project"])
@@ -127,6 +131,7 @@ class DriveBackup:
             "assets": {},
             "projects": [],
             "exports": [],
+            "templates": [],
         }
         previous_assets = {}
         last = self.drive.status().get("lastBackup") or {}
@@ -201,8 +206,23 @@ class DriveBackup:
                         **copied,
                     }
                 )
+            for template in templates:
+                from .domain import validate_template
+
+                validate_template(template)
+                validate(template["defaultProject"], catalog)
+                path = stage / (template["id"] + ".template.json")
+                path.write_text(
+                    json.dumps(template, ensure_ascii=False, allow_nan=False), encoding="utf-8"
+                )
+                copied = self.drive.upload(
+                    path, folders["Templates"], path.name, "application/json"
+                )
+                manifest["templates"].append(
+                    {"id": template["id"], "sha256": digest_file(path), **copied}
+                )
             for job in jobs:
-                if job.get("status") != "succeeded":
+                if job.get("status") != "succeeded" or job.get("kind") != "render":
                     continue
                 # Only outputs registered by the backend, never a client-supplied path.
                 path = contained(job["outputFile"], job["grant"])

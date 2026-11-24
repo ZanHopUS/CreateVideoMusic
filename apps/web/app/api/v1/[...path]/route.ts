@@ -42,7 +42,13 @@ async function proxy(request: NextRequest) {
   if (!/^\/api\/v1\/[a-zA-Z0-9/_-]+$/.test(path))
     return new Response(null, { status: 400 });
   const headers = new Headers();
-  for (const name of ['authorization', 'content-type', 'range', 'cookie']) {
+  for (const name of [
+    'authorization',
+    'content-type',
+    'range',
+    'cookie',
+    'x-amvs-editor',
+  ]) {
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
   }

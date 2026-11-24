@@ -88,7 +88,18 @@ def validate(project, assets=None):
                 if end > asset["durationTicks"]:
                     raise ValueError("Đoạn nguồn vượt thời lượng media.")
     for line in lyrics.values():
-        if line["sourceEndTicks"] <= line["sourceStartTicks"]:
+        audio_id = line.get("sourceAudioItemId")
+        if audio_id:
+            audio = next(
+                (i for i in project["items"] if i["id"] == audio_id and i["type"] == "audio"), None
+            )
+            if (
+                not audio
+                or assets is not None
+                and line["sourceEndTicks"] > assets[audio["assetId"]]["durationTicks"]
+            ):
+                raise ValueError("Nguồn lời bị thiếu hoặc timestamp vượt nguồn nhạc.")
+        if not line["text"].strip() or line["sourceEndTicks"] <= line["sourceStartTicks"]:
             raise ValueError("Thời gian lyrics không hợp lệ.")
         previous = line["sourceStartTicks"]
         for word in line["words"]:

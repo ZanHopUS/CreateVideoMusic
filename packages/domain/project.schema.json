@@ -88,6 +88,7 @@
         "assetId": { "$ref": "#/$defs/hash" },
         "text": { "type": "string", "maxLength": 10000 },
         "lyricId": { "$ref": "#/$defs/id" },
+        "role": { "enum": ["song-title", "artist-name"] },
         "startTicks": { "$ref": "#/$defs/tick" },
         "durationTicks": {
           "type": "integer",
@@ -115,7 +116,19 @@
             "background": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
             "x": { "type": "number", "minimum": -1920, "maximum": 1920 },
             "y": { "type": "number", "minimum": -1920, "maximum": 1920 },
-            "fit": { "enum": ["cover", "contain"] }
+            "fit": { "enum": ["cover", "contain"] },
+            "blur": { "type": "number", "minimum": 0, "maximum": 40 },
+            "brightness": { "type": "number", "minimum": 0, "maximum": 2 },
+            "cropX": { "type": "number", "minimum": 0, "maximum": 100 },
+            "cropY": { "type": "number", "minimum": 0, "maximum": 100 },
+            "strokeWidth": { "type": "number", "minimum": 0, "maximum": 10 },
+            "strokeColor": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+            "shadow": { "type": "boolean" },
+            "animation": { "enum": ["none", "fade", "slide", "scale"] },
+            "highlightColor": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            }
           }
         }
       },
@@ -157,6 +170,7 @@
         "source": { "enum": ["user", "import", "asr", "aligner"] },
         "status": { "enum": ["draft", "reviewed"] },
         "alignmentStatus": { "enum": ["unknown", "sentence", "word"] },
+        "sourceAudioItemId": { "$ref": "#/$defs/id" },
         "words": {
           "type": "array",
           "items": {

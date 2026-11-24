@@ -101,3 +101,45 @@ def prepare_video():
 
 if __name__ == "__main__":
     print(prepare())
+
+
+def prepare_vfr():
+    """Generated 15/30FPS red/blue VFR input for application trim/rate regression."""
+    import imageio_ffmpeg
+
+    folder = ROOT / ".local/test-assets"
+    folder.mkdir(parents=True, exist_ok=True)
+    target = folder / "vfr-red-blue.mp4"
+    if not target.exists():
+        subprocess.run(
+            [
+                imageio_ffmpeg.get_ffmpeg_exe(),
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-n",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=red:s=180x320:r=15:d=1",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=blue:s=180x320:r=30:d=1",
+                "-filter_complex",
+                "[0:v][1:v]concat=n=2:v=1:a=0[v]",
+                "-map",
+                "[v]",
+                "-fps_mode",
+                "vfr",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-pix_fmt",
+                "yuv420p",
+                str(target),
+            ],
+            check=True,
+        )
+    return target

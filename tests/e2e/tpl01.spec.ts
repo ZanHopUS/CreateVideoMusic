@@ -61,7 +61,8 @@ test('TPL01: import → edit → undo/redo → save/reopen → background MP4', 
     fullPage: true,
   });
   const title = await page.getByLabel('Tên project').inputValue();
-  await page.getByRole('button', { name: title, exact: true }).click();
+  await expect(page.locator('.navigation .current-project')).toHaveText(title);
+  await page.locator('.navigation .current-project').click();
   await expect(page.getByLabel('Nội dung caption')).toHaveValue(
     'Một giai điệu riêng',
   );
@@ -103,9 +104,9 @@ test('TPL01: import → edit → undo/redo → save/reopen → background MP4', 
   });
   await next.goto(baseURL + '/#session=' + token);
   await expect(
-    next.getByRole('button', { name: title, exact: true }),
+    next.getByRole('button', { name: title, exact: true }).first(),
   ).toBeVisible();
-  await next.getByRole('button', { name: title, exact: true }).click();
+  await next.getByRole('button', { name: title, exact: true }).first().click();
   await expect(next.locator('[data-frame]')).toHaveAttribute(
     'data-frame',
     '30',

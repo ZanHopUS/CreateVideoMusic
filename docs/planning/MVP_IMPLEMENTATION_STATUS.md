@@ -1,4 +1,27 @@
-# MVP Implementation Status — S0 / S1
+# MVP Implementation Status
+
+## Hiện tại — 24/11/2026
+
+Người dùng giao triển khai S2–S6. Đã bổ sung lyrics/manual import/review, worker
+ASR/alignment local, effects/presets, recovery/portable/relink, editor lease,
+library/template/suggestions và Drive template snapshot. **Chưa hoàn tất toàn bộ
+S2–S6; chưa nghiệm thu Core/release.**
+
+Xem [kết quả và giới hạn S2–S6](S2_S6_RESULTS.md),
+[kế hoạch thực thi](S2_S6_EXECUTION.md), [cấu hình AI local](LOCAL_AI_SETUP.md).
+26 unit, 63 integration và 11 browser regression tests đạt; browser fidelity
+7 frame đạt riêng. Build/typecheck/lint/format đạt.
+Ma trận 36/36 preset MP4 và 6 lượt AI local development đạt; lỗi NumPy của harness
+VFR được sửa bằng packed RGB, không thêm dependency. VFR, 2 instrumental ASR và 2 alignment fallback đạt. Lượt 300s 1080p60 đạt E2E
+và decode độc lập: 18.000 frame, 0 timestamp errors; sampled aggregate private
+peak 1,681 GiB. Chi tiết/giới hạn ở báo cáo S2–S6, không cộng smoke thành quality acceptance.
+
+Git baseline `65a6bef` đã push từ trước; thay đổi lượt này trên `dev`, chưa commit/push.
+Source GC có pins/consent và cache quota đã triển khai, có kiểm regression. Hai
+round-trip Drive thật trên dữ liệu tự tạo đạt. Release blockers còn mở gồm
+corpus/gold/listening, ACC-01, full fault/TOCTOU audit và Drive cross-PC/faults.
+
+## Checkpoint lịch sử S0/S1 và đầu S2 — 23/11/2026
 
 **S2 Music Card:** [kết quả triển khai](S2_MUSIC_CARD_RESULTS.md) có TPL-02
 chọn được, tên bài/nghệ sĩ, ảnh bìa và progress cùng scene. MP4 chức năng 3s
@@ -84,7 +107,7 @@ không coi đó là pháp lý clearance cho phân phối hoặc mọi model/font
 source inventory của checkpoint hiện tại. [README](../../README.md) có setup/start
 và lệnh verification thực; restart launcher nếu session memory đã mất.
 
-## Chưa hoàn tất và bước tiếp theo
+## Bước tiếp theo tại checkpoint lịch sử 23/11
 
 **S0 foundation có evidence trên máy hiện tại; S1 là slice nội bộ có chức năng,
 chưa nghiệm thu đầy đủ Core FR.** Playhead/manual view được kiểm thêm trong E2E;

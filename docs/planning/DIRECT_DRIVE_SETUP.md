@@ -1,6 +1,13 @@
 # Kết nối Google Drive trên web
 
-Ngày: **23/11/2026**. OAuth đã kết nối với thư mục CreateVideoMusic. Một bản sao lưu
+Cập nhật 24/11: đã kiểm **hai round-trip cloud thật** bằng workspace disposable,
+1 project + 1 typed template + 3 media tự tạo, SHA khớp, media dùng lại và project
+đang sửa được giữ nguyên. Chỉ upload fixture tự tạo vào child folder kiểm thử;
+không upload media cá nhân. Evidence `.local/evidence/s6-drive/1795460827029814200/results.json`.
+Không suy thành cross-PC/quota/revoke/large-upload verification; xem
+[S2–S6](S2_S6_RESULTS.md). Tự sao lưu vẫn mặc định tắt.
+
+Checkpoint cloud lịch sử **23/11/2026**. OAuth đã kết nối với thư mục CreateVideoMusic. Một bản sao lưu
 thật gồm 4 project/0 media/0 MP4 đã được tìm và khôi phục thành công vào workspace
 thử riêng (4/4 project); chưa thử bản sao lưu có media hoặc MP4.
 Xem [quyết định và giới hạn](../decisions/ADR-0002-DIRECT_GOOGLE_DRIVE.md).

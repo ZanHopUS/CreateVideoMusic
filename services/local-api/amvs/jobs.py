@@ -1,6 +1,7 @@
 """Persistent jobs and owned subprocess tree supervision; no PoC imports."""
 
 import json
+import math
 import os
 import queue
 import shutil
@@ -15,10 +16,17 @@ import av
 import imageio_ffmpeg
 import psutil
 
-from .domain import ROOT, TICKS, content_hash, validate, validate_job
+from .domain import ROOT, TICKS, content_hash, parse_json, validate, validate_job
+from .process_group import OwnedGroup
+from .providers import provider
+from .storage_policy import StoragePolicy
 from .store import contained, digest_file
 
 TERMINAL = {"succeeded", "failed", "cancelled", "interrupted"}
+
+
+class RenderInputError(ValueError):
+    pass
 
 
 class Jobs:
@@ -41,7 +49,18 @@ class Jobs:
         with self.lock:
             job = self.rows[id]
             result = {
-                k: v for k, v in job.items() if k not in {"project", "grant", "outputFile", "pid"}
+                k: v
+                for k, v in job.items()
+                if k
+                not in {
+                    "project",
+                    "grant",
+                    "outputFile",
+                    "pid",
+                    "asr",
+                    "packageInfo",
+                    "packageSnapshot",
+                }
             }
             validate_job(result)
             return result
@@ -53,23 +72,27 @@ class Jobs:
 
     def start(self, project, grant):
         validate(project, self.store.assets())
-        if (
-            project["templateRef"]["id"] not in {"TPL-01", "TPL-02"}
-            or project["lyrics"]
-            or any(i["type"] not in {"image", "video", "audio", "text"} for i in project["items"])
+        if any(
+            l["status"] != "reviewed"
+            for l in project["lyrics"]
+            if any(i.get("lyricId") == l["id"] for i in project["items"])
         ):
-            raise ValueError("Hiện hỗ trợ TPL-01/02 với ảnh/video, nhạc và chữ.")
-        if project["preset"] != {"width": 720, "height": 1280, "fps": 30}:
-            raise ValueError("Lượt đầu hỗ trợ 720p30 dọc.")
+            raise RenderInputError("Hãy duyệt lời trước khi xuất.")
         if not any(i["type"] in {"image", "video"} for i in project["items"]) or not any(
             i["type"] == "audio" for i in project["items"]
         ):
-            raise ValueError("Hãy thêm ảnh hoặc video và nhạc trước khi xuất.")
+            raise RenderInputError("Hãy thêm ảnh hoặc video và nhạc trước khi xuất.")
         if (
             project["templateRef"]["id"] == "TPL-02"
             and sum(i["type"] == "image" for i in project["items"]) < 2
         ):
-            raise ValueError("Music Card cần ít nhất hai ảnh.")
+            raise RenderInputError("Music Card cần ít nhất hai ảnh.")
+        if project["templateRef"]["id"] == "TPL-03" and not any(
+            i["type"] == "lyrics" for i in project["items"]
+        ):
+            raise RenderInputError(
+                "Lyrics Video cần lời đã duyệt và áp dụng vào đoạn nhạc đang chọn."
+            )
         id = uuid.uuid4().hex
         job = {
             "schemaVersion": "amvs-job/1",
@@ -86,11 +109,165 @@ class Jobs:
         }
         with self.lock:
             if self.stopping or sum(j["status"] not in TERMINAL for j in self.rows.values()) >= 10:
+                raise RenderInputError("Hàng đợi đã đầy.")
+            self.rows[id] = job
+            self.store.put_job(job)
+        self.pool.submit(self.run, id)
+        return self.public(id)
+
+    def start_package(self, current, grant):
+        validate(current["project"], self.store.assets())
+        id = uuid.uuid4().hex
+        job = {
+            "schemaVersion": "amvs-job/1",
+            "id": id,
+            "kind": "package",
+            "projectId": current["project"]["id"],
+            "status": "queued",
+            "phase": "queued",
+            "progress": 0,
+            "snapshotHash": current["contentHash"],
+            "message": "Đang chờ đóng gói project…",
+            "project": current["project"],
+            "packageSnapshot": current,
+            "grant": str(grant),
+        }
+        with self.lock:
+            if self.stopping or sum(j["status"] not in TERMINAL for j in self.rows.values()) >= 10:
                 raise ValueError("Hàng đợi đã đầy.")
             self.rows[id] = job
             self.store.put_job(job)
         self.pool.submit(self.run, id)
         return self.public(id)
+
+    def package_result(self, id):
+        job = self.rows[id]
+        if job["kind"] != "package" or job["status"] != "succeeded":
+            raise ValueError("Package chưa sẵn sàng.")
+        return job["packageInfo"]
+
+    def start_asr(self, project, audio_id, language, model, lines=None, provider_id="local"):
+        validate(project, self.store.assets())
+        if language not in {"vi", "en"} or model not in {"small", "medium"}:
+            raise ValueError("Ngôn ngữ/model không hợp lệ.")
+        audio = next(
+            (i for i in project["items"] if i["id"] == audio_id and i["type"] == "audio"), None
+        )
+        if not audio:
+            raise ValueError("Chọn clip nhạc nguồn.")
+        runtime = provider(provider_id).runtime(language, model, alignment=lines is not None)
+        if lines is not None:
+            if not lines:
+                raise ValueError("Cần câu lời có mốc nguồn trước khi căn từ.")
+            candidate = json.loads(json.dumps(project))
+            candidate["items"] = [i for i in candidate["items"] if i["type"] != "lyrics"]
+            candidate["lyrics"] = lines
+            validate(candidate, self.store.assets())
+        id = uuid.uuid4().hex
+        job = {
+            "schemaVersion": "amvs-job/1",
+            "id": id,
+            "kind": "alignment" if lines is not None else "asr",
+            "projectId": project["id"],
+            "snapshotHash": content_hash(project),
+            "status": "queued",
+            "phase": "queued",
+            "progress": 0,
+            "message": "Đang chờ nhận dạng local…",
+            "project": json.loads(json.dumps(project)),
+            "asr": {
+                "audio": audio,
+                "language": language,
+                "model": ("align-" + language) if lines is not None else model,
+                **runtime,
+                "lines": lines,
+            },
+        }
+        with self.lock:
+            if self.stopping or sum(j["status"] not in TERMINAL for j in self.rows.values()) >= 10:
+                raise ValueError("Hàng đợi đã đầy.")
+            self.rows[id] = job
+            self.store.put_job(job)
+        self.pool.submit(self.run, id)
+        return self.public(id)
+
+    def run_asr(self, id, job, folder):
+        config = job["asr"]
+        audio = config["audio"]
+        source = self.store.asset_path(self.store.assets()[audio["assetId"]])
+        if digest_file(source) != audio["assetId"]:
+            raise ValueError("Media nguồn bị thay đổi.")
+        start = audio["sourceStartTicks"]
+        duration = (
+            audio["durationTicks"] * audio["speed"]["numerator"] / audio["speed"]["denominator"]
+        )
+        self.patch(id, status="preparing", phase="preparing", message="Chuẩn bị đoạn nhạc nguồn…")
+        self.command(
+            id,
+            [
+                imageio_ffmpeg.get_ffmpeg_exe(),
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-n",
+                "-ss",
+                str(start / TICKS),
+                "-i",
+                str(source),
+                "-t",
+                str(duration / TICKS),
+                "-vn",
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                str(folder / "audio.wav"),
+            ],
+            folder,
+            "prepare-audio",
+        )
+        (folder / "asr-input.json").write_text(
+            json.dumps(
+                {**config, "sourceStartTicks": start, "sourceEndTicks": round(start + duration)}
+            ),
+            encoding="utf-8",
+        )
+        self.check(id)
+        self.patch(id, status="running", phase="running", message="Đang nhận dạng lời trên CPU…")
+        self.command(
+            id,
+            [
+                config["python"],
+                str(
+                    ROOT
+                    / (
+                        "services/local-api/amvs/alignment_worker.py"
+                        if job["kind"] == "alignment"
+                        else "services/local-api/amvs/asr_worker.py"
+                    )
+                ),
+                str(folder),
+            ],
+            folder,
+            "asr",
+        )
+        result = parse_json((folder / "lyrics-result.json").read_bytes())
+        candidate = json.loads(json.dumps(job["project"]))
+        candidate["lyrics"] = result["lines"]
+        candidate["items"] = [i for i in candidate["items"] if i["type"] != "lyrics"]
+        validate(candidate, self.store.assets())
+        self.check(id)
+        self.patch(id, status="succeeded", phase="succeeded", progress=1, message=result["message"])
+
+    def lyrics_result(self, id):
+        job = self.rows[id]
+        if job["kind"] not in {"asr", "alignment"} or job["status"] != "succeeded":
+            raise ValueError("Bản nháp chưa sẵn sàng.")
+        return parse_json(
+            contained(
+                self.store.root / "jobs" / id / "lyrics-result.json", self.store.root
+            ).read_bytes()
+        )
 
     def cancel(self, id):
         with self.lock:
@@ -125,10 +302,24 @@ class Jobs:
         samples = []
         low = None
         began = time.monotonic()
+        previous_cpu = {}
+        previous_sample = began
+        ownership = OwnedGroup(folder / (phase + "-owner")) if os.name == "nt" else None
         with (folder / f"{phase}.stderr.log").open("w", encoding="utf-8") as stderr:
-            process = subprocess.Popen(
-                args, cwd=ROOT, stdout=subprocess.PIPE, stderr=stderr, text=True, encoding="utf-8"
-            )
+            try:
+                launch = ownership.launch if ownership else subprocess.Popen
+                process = launch(
+                    args,
+                    cwd=ROOT,
+                    stdout=subprocess.PIPE,
+                    stderr=stderr,
+                    text=True,
+                    encoding="utf-8",
+                )
+            except BaseException:
+                if ownership:
+                    ownership.close()
+                raise
 
             def read():
                 for line in process.stdout:
@@ -154,12 +345,18 @@ class Jobs:
                             pass
                     available = psutil.virtual_memory().available
                     private = 0
+                    cpu_delta = 0
                     try:
                         parent = psutil.Process(process.pid)
                         for child in [parent, *parent.children(recursive=True)]:
                             try:
                                 mem = child.memory_info()
                                 private += getattr(mem, "private", mem.rss)
+                                cpu = child.cpu_times()
+                                total = cpu.user + cpu.system
+                                if child.pid in previous_cpu:
+                                    cpu_delta += max(0, total - previous_cpu[child.pid])
+                                previous_cpu[child.pid] = total
                             except psutil.NoSuchProcess:
                                 pass
                     except psutil.NoSuchProcess:
@@ -170,9 +367,13 @@ class Jobs:
                         {
                             "elapsed_s": now - began,
                             "private_bytes": private,
+                            "cpuPercentOfOneCore": cpu_delta
+                            / max(0.001, now - previous_sample)
+                            * 100,
                             "system_available_bytes": available,
                         }
                     )
+                    previous_sample = now
                     if private > 12 * 1024**3 or (low and now - low >= 10):
                         raise MemoryError("RAM thấp; render đã dừng để bảo vệ dữ liệu.")
                     if now - began > 3000:
@@ -185,11 +386,20 @@ class Jobs:
                 self.kill(process)
                 raise
             finally:
+                cleanup_error = None
+                if ownership:
+                    try:
+                        ownership.close()
+                    except Exception as error:
+                        cleanup_error = error
+                reader.join(timeout=2)
                 if process.stdout:
                     process.stdout.close()
                 (folder / f"{phase}.resources.json").write_text(
                     json.dumps({"samples": samples}, indent=2), encoding="utf-8"
                 )
+                if cleanup_error:
+                    raise cleanup_error
         return samples
 
     def run(self, id):
@@ -199,9 +409,34 @@ class Jobs:
             self.check(id)
             folder = contained(self.store.root / "jobs" / id, self.store.root)
             folder.mkdir(parents=True)
+            if job["kind"] == "package":
+                from .snapshots import Snapshots
+
+                self.patch(
+                    id, status="running", phase="running", message="Đang đóng gói project và media…"
+                )
+                current = job["packageSnapshot"]
+                result = Snapshots(self.store).export(
+                    job["projectId"],
+                    current["revision"],
+                    job["grant"],
+                    snapshot=current,
+                    check=lambda: self.check(id),
+                )
+                with self.lock:
+                    self.check(id)
+                    self.patch(
+                        id,
+                        status="succeeded",
+                        phase="succeeded",
+                        progress=1,
+                        packageInfo=result,
+                        message="Đã tạo package di chuyển có checksum.",
+                    )
+                return
             consecutive = 0
             admission_samples = []
-            self.patch(id, phase="waiting-resources", message="Chờ đủ RAM trống để xuất video…")
+            self.patch(id, phase="waiting-resources", message="Chờ đủ RAM trống để chạy tác vụ…")
             while consecutive < 10:
                 self.check(id)
                 available = psutil.virtual_memory().available
@@ -223,9 +458,26 @@ class Jobs:
                 )
                 if consecutive < 10:
                     time.sleep(1)
+            if job["kind"] in {"asr", "alignment"}:
+                self.run_asr(id, job, folder)
+                return
             public = folder / "public"
             public.mkdir()
             assets = self.store.assets()
+            reserve = StoragePolicy(self.store).read()["reserveGiB"] * 1024**3
+            source_bytes = sum(assets[k]["bytes"] for k in job["project"]["assetRefs"])
+            estimate = source_bytes + int(
+                job["project"]["durationTicks"]
+                / TICKS
+                * job["project"]["preset"]["width"]
+                * job["project"]["preset"]["height"]
+                * 0.2
+            )
+            if (
+                shutil.disk_usage(folder).free < estimate + max(reserve, estimate // 10)
+                or shutil.disk_usage(job["grant"]).free < estimate + reserve
+            ):
+                raise OSError("Không đủ dung lượng cho bản dựng và staging.")
             mapping = {}
             self.patch(id, status="preparing", phase="preparing", message="Chuẩn bị bản dựng…")
             for key in job["project"]["assetRefs"]:
@@ -239,7 +491,7 @@ class Jobs:
             (folder / "input.json").write_text(
                 json.dumps({"project": job["project"], "assets": mapping}), encoding="utf-8"
             )
-            if shutil.disk_usage(folder).free < 2 * 1024**3:
+            if shutil.disk_usage(folder).free < reserve:
                 raise OSError("Không đủ dung lượng trống.")
             self.patch(id, status="running", phase="running", message="Đang dựng video…")
             samples = self.command(
@@ -253,7 +505,10 @@ class Jobs:
                 progress=0.88,
                 message="Hoàn thiện âm thanh…",
             )
-            seconds = job["project"]["durationTicks"] / TICKS
+            preset = job["project"]["preset"]
+            seconds = (
+                math.ceil(job["project"]["durationTicks"] * preset["fps"] / TICKS) / preset["fps"]
+            )
             ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
             samples += self.command(
                 id,
@@ -301,7 +556,11 @@ class Jobs:
                 if (
                     video.codec_context.name != "h264"
                     or audio.codec_context.name != "aac"
-                    or abs(media.duration / av.time_base - seconds) > 1 / 30
+                    or abs(media.duration / av.time_base - seconds)
+                    > 1 / job["project"]["preset"]["fps"]
+                    or video.width != job["project"]["preset"]["width"]
+                    or video.height != job["project"]["preset"]["height"]
+                    or video.average_rate != job["project"]["preset"]["fps"]
                 ):
                     raise ValueError("Video xuất không đạt kiểm tra metadata.")
                 frames = 0
@@ -309,21 +568,14 @@ class Jobs:
                     if frames % 30 == 0:
                         self.check(id)
                     frames += 1
-                if frames != round(seconds * 30):
+                if frames != round(seconds * job["project"]["preset"]["fps"]):
                     raise ValueError("Video xuất thiếu frame.")
             self.check(id)
             target = contained(
                 Path(job["grant"]) / f"{job['project']['id']}-{id}.mp4", job["grant"]
             )
-            stage = contained(target.with_suffix(".stage"), job["grant"])
-            with (folder / "bounded.mp4").open("rb") as source, stage.open("xb") as output:
-                shutil.copyfileobj(source, output, 1024 * 1024)
-                output.flush()
-                os.fsync(output.fileno())
-            with self.lock:
-                self.check(id)
-                contained(target, job["grant"])
-                os.replace(stage, target)
+
+            def published():
                 self.patch(
                     id,
                     status="succeeded",
@@ -339,6 +591,8 @@ class Jobs:
                     resourceScope="render-and-finalize-children-only",
                     message="Video đã sẵn sàng.",
                 )
+
+            self.publish_file(id, folder / "bounded.mp4", target, job["grant"], published)
         except InterruptedError:
             self.patch(id, status="cancelled", phase="cancelled", message="Đã hủy render.")
         except Exception as error:
@@ -347,13 +601,80 @@ class Jobs:
                 id,
                 status="failed",
                 phase="failed",
-                message="Không thể xuất video. Dữ liệu project được giữ nguyên.",
+                message="Tác vụ không hoàn tất. Dữ liệu project được giữ nguyên.",
             )
             folder = contained(self.store.root / "jobs" / id, self.store.root)
             folder.mkdir(parents=True, exist_ok=True)
             (folder / "failure.json").write_text(
                 json.dumps({"type": type(error).__name__, "message": str(error)}), encoding="utf-8"
             )
+
+    def publish_file(self, id, source, target, grant, published=None):
+        """Publish one owned stage atomically; discard incomplete copies on failure."""
+        stage = contained(target.with_suffix(".stage"), grant)
+        created = False
+        try:
+            with source.open("rb") as incoming, stage.open("xb") as output:
+                created = True
+                while chunk := incoming.read(1024 * 1024):
+                    self.check(id)
+                    output.write(chunk)
+                output.flush()
+                os.fsync(output.fileno())
+            with self.lock:
+                self.check(id)
+                contained(target, grant)
+                os.replace(stage, target)
+                if published:
+                    published()
+        finally:
+            if created:
+                contained(stage, grant).unlink(missing_ok=True)
+
+    def temp_inventory(self):
+        result = []
+        with self.lock:
+            for id, job in self.rows.items():
+                if job["status"] not in TERMINAL:
+                    continue
+                folder = contained(self.store.root / "jobs" / id, self.store.root)
+                entries = []
+                for name in ("public", "bundle", "raw.mp4", "bounded.mp4", "audio.wav"):
+                    path = contained(folder / name, folder)
+                    if not path.exists():
+                        continue
+                    if path.is_dir():
+                        files = [contained(f, folder) for f in path.rglob("*") if f.is_file()]
+                        size = sum(f.stat().st_size for f in files)
+                    else:
+                        size = path.stat().st_size
+                    entries.append({"name": name, "bytes": size})
+                if entries:
+                    result.append(
+                        {"id": id, "bytes": sum(e["bytes"] for e in entries), "entries": entries}
+                    )
+        return result
+
+    def clean_temp(self, ids):
+        if (
+            not isinstance(ids, list)
+            or len(ids) > 1000
+            or any(not isinstance(id, str) for id in ids)
+        ):
+            raise ValueError("Danh sách job không hợp lệ.")
+        with self.lock:
+            permitted = {r["id"]: r for r in self.temp_inventory()}
+            if any(id not in permitted for id in ids):
+                raise ValueError("Chỉ dọn temp của job đã kết thúc.")
+            for id in ids:
+                folder = contained(self.store.root / "jobs" / id, self.store.root)
+                for entry in permitted[id]["entries"]:
+                    path = contained(folder / entry["name"], folder)
+                    if path.is_dir():
+                        shutil.rmtree(path)
+                    else:
+                        path.unlink()
+            return {"deletedJobs": len(ids), "sourceAssetsPreserved": True}
 
     def shutdown(self):
         self.stopping = True

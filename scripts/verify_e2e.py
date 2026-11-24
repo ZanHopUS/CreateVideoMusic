@@ -13,6 +13,13 @@ ROOT = Path(__file__).resolve().parents[1]
 def visual_checks(folder, job, assets):
     """Sparse RGB comparisons for generated 9:16 fixtures, outside the caption area."""
     project = job["project"]
+    if project["templateRef"]["id"] != "TPL-01":
+        return [
+            {
+                "status": "not-run",
+                "reason": "Overlay template requires preview/output comparison; raw background pixels are intentionally changed.",
+            }
+        ]
     fps = project["preset"]["fps"]
     visuals = [i for i in project["items"] if i["type"] in {"image", "video"}]
     targets = {round((i["startTicks"] + i["durationTicks"] / 2) * fps / 48000): i for i in visuals}
@@ -88,6 +95,7 @@ def main():
                     with sqlite3.connect(db) as connection:
                         if any(
                             json.loads(r[0])["status"] == "succeeded"
+                            and json.loads(r[0]).get("kind") == "render"
                             for r in connection.execute("SELECT body FROM jobs")
                         ):
                             passed.append(folder)
@@ -104,7 +112,7 @@ def main():
         database.close()
     rows = []
     for job in jobs:
-        if job["status"] != "succeeded":
+        if job["status"] != "succeeded" or job.get("kind") != "render":
             continue
         output = Path(job["outputFile"]).resolve()
         if not output.is_relative_to(folder.resolve()):
@@ -123,7 +131,7 @@ def main():
                 if abs(float(frame.pts * frame.time_base) - count / preset["fps"]) > 0.000001:
                     errors += 1
                 if count == preset["fps"]:
-                    png = folder / "output-frame-30.png"
+                    png = folder / f"output-{job['id']}-frame-{preset['fps']}.png"
                     if not png.exists():
                         with av.open(str(png), "w", format="image2") as destination:
                             stream = destination.add_stream("png")
