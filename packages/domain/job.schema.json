@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "amvs-job/1",
+  "title": "JobState",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "kind",
+    "projectId",
+    "status",
+    "phase",
+    "progress",
+    "snapshotHash",
+    "message"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "amvs-job/1" },
+    "id": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "kind": { "enum": ["render", "asr", "alignment", "package"] },
+    "projectId": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,100}$" },
+    "status": {
+      "enum": [
+        "queued",
+        "preparing",
+        "running",
+        "finalizing",
+        "validating",
+        "succeeded",
+        "cancelling",
+        "cancelled",
+        "failed",
+        "interrupted"
+      ]
+    },
+    "phase": {
+      "enum": [
+        "queued",
+        "waiting-resources",
+        "preparing",
+        "running",
+        "finalizing",
+        "validating",
+        "succeeded",
+        "cancelling",
+        "cancelled",
+        "failed",
+        "interrupted"
+      ]
+    },
+    "progress": { "type": "number", "minimum": 0, "maximum": 1 },
+    "snapshotHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "message": { "type": "string", "maxLength": 1000 },
+    "resourceSampledPass": { "type": "boolean" },
+    "resourceScope": { "const": "render-and-finalize-children-only" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "succeeded" } } },
+      "then": { "properties": { "progress": { "const": 1 } } }
+    }
+  ]
+}

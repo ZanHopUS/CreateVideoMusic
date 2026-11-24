@@ -1,0 +1,9 @@
+node_modules
+.poc
+.local
+.venv-api
+.next
+apps/web/.next
+apps/web/next-env.d.ts
+package-lock.json
+poc

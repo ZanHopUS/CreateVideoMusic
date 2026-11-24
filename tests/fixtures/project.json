@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "amvs-project/1", "id": "fixture-project", "name": "Bản nháp — tiếng Việt",
+  "timebase": 48000, "durationTicks": 96000,
+  "preset": {"width": 720, "height": 1280, "fps": 30},
+  "templateRef": {"id": "TPL-01", "version": 1},
+  "orderedTracks": [{"id": "background", "kind": "background"}, {"id": "music", "kind": "music"}, {"id": "text", "kind": "text"}],
+  "items": [{"id": "caption", "trackId": "text", "type": "text", "text": "Một giai điệu riêng", "startTicks": 0, "durationTicks": 96000, "sourceStartTicks": 0, "speed": {"numerator": 1, "denominator": 1}, "volume": 0.3, "style": {"fontSize": 54, "color": "#ffffff", "x": 56, "y": 850}}],
+  "lyrics": [], "assetRefs": []
+}

@@ -11,6 +11,11 @@ checks identical video packet payload hashes, and checks video/audio/container
 duration within 1ms. This is a candidate workaround, not a production default;
 audio undergoes another lossy encode and needs listening review.
 
+Follow-up fidelity testing added `apad=whole_dur` before trim to handle an observed
+11ms short audio EOF at 1.25× speed. A separate regression verifies the original
+300s tail signal. Padding fills missing duration with silence; it cannot restore
+missing source content. See [fidelity results](../../docs/technical-discovery/PREVIEW_RENDER_FIDELITY_RESULTS.md).
+
 ```powershell
 ./.poc/venv-asr/Scripts/python.exe poc/monitor.py --out .poc/evidence/poc-03/bounded-audio-matrix/resources --timeout 300 -- ./.poc/venv-asr/Scripts/python.exe poc/render/bound_matrix_audio.py
 ./.poc/venv-asr/Scripts/python.exe poc/render/validate.py --matrix --directory .poc/evidence/poc-03/bounded-audio-matrix --strict-container-duration
@@ -38,6 +43,24 @@ The renderer uses 1080×1920, 60FPS, concurrency 2, one offthread video thread,
 then `bounded.mp4`, both ffprobe reports, source hashes and three PNGs. A completed
 directory cannot be overwritten. `--ratio 16-9` and `--ratio 1-1` select separate
 directories; pass the same ratio to the validator. They are not automatically run.
+
+## Separate admission follow-up runs
+
+`--run-id` creates a separate suffixed directory and bundle; pass the same ID to
+the validator. Omit it to retain original case paths. Existing raw/bounded MP4,
+run config or error evidence blocks another render into that directory.
+Use a new ID for every retry, including admission-only denial:
+
+```powershell
+./.poc/venv-asr/Scripts/python.exe poc/monitor.py --out .poc/evidence/poc-04/tpl03-9-16-300s-1080p60-admission-02/resources --timeout 3000 --min-start-available-gib 4 --start-samples 10 --admission-timeout 30 -- node poc/render/render-stress.mjs --run-id admission-02
+./.poc/venv-asr/Scripts/python.exe poc/monitor.py --out .poc/evidence/poc-04/tpl03-9-16-300s-1080p60-admission-02/validation-resources --timeout 300 -- ./.poc/venv-asr/Scripts/python.exe poc/render/validate_stress.py --run-id admission-02
+```
+
+Run validation only after a completed render. Admission exit 4 means no child
+started, not a render quality failure or pass. Stable ≥4 GiB startup headroom is
+a candidate harness policy; R0 remains available ≥2 GiB during execution.
+Inspect `r0_sampled_pass` independently of completion. Do not run parallel stress
+jobs or regenerate shared input assets while a job is active.
 
 ## Four remaining planned cases
 

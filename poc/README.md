@@ -1,5 +1,10 @@
 # Local Proof of Concept
 
+State/Undo/Redo, template reuse và SQLite/manual/recovery/portable local:
+[state-storage/README.md](state-storage/README.md). Có functional evidence; render
+restore từng fail R0 RAM, một lượt admission follow-up đã đạt sampled R0.
+Đọc giới hạn trước chạy lại.
+
 Forced alignment CPU và loader Việt: [poc/alignment/README.md](alignment/README.md).
 
 Preview lời Việt với audio và timing thật: [render/LYRICS_REVIEW.md](render/LYRICS_REVIEW.md).
@@ -9,6 +14,8 @@ Benchmark ASR `small`/`medium` cùng điều kiện: [lyrics/MODEL_COMPARISON.md
 Audio duration và stress 300s: [render/STRESS_RENDER.md](render/STRESS_RENDER.md).
 
 Kết quả đủ năm stress outputs: [RENDER_STRESS_SUITE_RESULTS.md](../docs/technical-discovery/RENDER_STRESS_SUITE_RESULTS.md).
+
+Player fidelity và cancel/retry/snapshot: [render/fidelity/README.md](render/fidelity/README.md).
 
 Chỉ dùng cho thử nghiệm đã duyệt ngày 22/11/2026; không phải application chính thức.
 Cloud inference tắt. Không commit/push khi chưa được yêu cầu.

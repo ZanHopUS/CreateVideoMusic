@@ -6,3 +6,12 @@ __pycache__/
 .env.*
 !.env.example
 node_modules/
+# Local application workspace, environments, build output and test artifacts
+.local/
+.venv*/
+.next/
+dist/
+test-results/
+playwright-report/
+.pytest_cache/
+*.tsbuildinfo

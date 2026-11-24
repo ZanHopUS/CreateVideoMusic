@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "amvs-template/1",
+  "title": "TemplateDefinition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "version",
+    "name",
+    "defaultProject",
+    "slots"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "amvs-template/1" },
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,100}$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "defaultProject": {
+      "type": "object",
+      "tsType": "import('./generated').ProjectContent"
+    },
+    "slots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "itemId", "kind", "required"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,100}$" },
+          "itemId": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,100}$" },
+          "kind": { "enum": ["image", "video", "audio", "text", "lyrics"] },
+          "required": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

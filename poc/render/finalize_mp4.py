@@ -32,7 +32,7 @@ def finalize(source, output, seconds):
     command = [imageio_ffmpeg.get_ffmpeg_exe(), '-hide_banner', '-loglevel', 'error',
                '-n', '-i', str(source), '-map', '0:v:0', '-map', '0:a:0',
                '-c:v', 'copy', '-c:a', 'aac', '-ar', '48000', '-b:a', '192k',
-               '-af', f'atrim=duration={seconds},asetpts=PTS-STARTPTS',
+               '-af', f'apad=whole_dur={seconds},atrim=duration={seconds},asetpts=PTS-STARTPTS',
                '-t', str(seconds), '-movflags', '+faststart', str(output)]
     began = time.perf_counter()
     subprocess.run(command, check=True)

@@ -6,6 +6,14 @@ Ngày: **22/11/2026 (Asia/Saigon)**. Trạng thái: **đánh giá trước PoC**
 
 ## 1. Cách đánh giá
 
+**Follow-up fidelity/lifecycle 23/11:** đã xác nhận source-offset adapter sai và
+sửa trong harness. Direct VFR có 3/27 mốc lệch hình dù currentTime gần đúng;
+proxy CFR đơn thuần chưa đủ. Seek-nudge 10µs đạt một lượt TPL03 riêng, còn là
+candidate. Cancel API nhanh nhưng worker linger ~30s; supervised owned-tree
+cleanup ~2s đã đo đạt, không phải thư viện tự cleanup. R-09/11/20 còn mở cho
+media rộng hơn, finalize/crash, editor state và production integration. Xem
+[fidelity](PREVIEW_RENDER_FIDELITY_RESULTS.md), [lifecycle](JOB_LIFECYCLE_RESULTS.md).
+
 **Cập nhật sau các lượt PoC:** bảng dưới là baseline rủi ro trước thử nghiệm;
 trạng thái hiện tại xem [POC_STATUS.md](POC_STATUS.md). Medium giảm lỗi trên một
 bài Việt nhưng chưa có held-out/correction time; loader alignment Việt đã sửa
@@ -89,6 +97,18 @@ Tên `AI-01/02/03` cũng xuất hiện như test IDs trong SRS. Bảng này dùn
 | ACC-01 | POC_PLAN gate tables, TD-02 | User duyệt ngưỡng sàng lọc; benchmark xong mới khóa release thresholds |
 
 ## 5. Quy tắc dừng và quyết định phê duyệt
+
+Cập nhật thực nghiệm 23/11/2026: local PoC đã được user cho phép theo
+[POC_STATUS.md](POC_STATUS.md); các yêu cầu approval phía dưới là planning history,
+không hủy quyền local hiện có. [Storage/recovery results](STORAGE_RECOVERY_POC_RESULTS.md)
+bổ sung evidence cho fault/restore/shared assets, chưa đóng rủi ro production hoặc
+power loss. Drive vẫn Not run. Rủi ro tài nguyên còn mở: render restore concurrency
+2 min available 1.850 GiB; concurrency 1 bị dừng ở 1.651 GiB. Không dùng functional
+pass thay cho R0, không tự tăng yêu cầu máy.
+
+Follow-up [resource admission](RENDER_RESOURCE_ADMISSION_RESULTS.md) có một lượt
+12s đạt chức năng và R0 sampled sau preflight ổn định ≥4 GiB; không đóng rủi ro
+300s/editor contention hoặc thay bằng chứng fail trên.
 
 Không chạy PoC trước TD-01/02 và các approval liên quan. Khi đã được phép thử: dừng run nếu thiếu quyền dùng dữ liệu, có outbound trái consent, có chi phí không được duyệt, mất dữ liệu hoặc vượt resource safety gate. Dùng bản sao disposable cho fault tests; không tác động manual project thật.
 
