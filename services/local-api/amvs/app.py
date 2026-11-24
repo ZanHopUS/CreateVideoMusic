@@ -29,6 +29,7 @@ from .snapshots import Snapshots
 from .source_gc import SourceGC
 from .storage_policy import StorageQuota
 from .store import Conflict, Store, contained
+from .ui_state import UIState
 
 
 class BudgetExceeded(ValueError):
@@ -54,6 +55,7 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
     origin = origin or os.environ.get("AMVS_ORIGIN", "http://127.0.0.1:3000")
     api_host = api_host or os.environ.get("AMVS_API_HOST", "127.0.0.1:8765")
     store = Store(workspace or os.environ.get("AMVS_WORKSPACE", str(ROOT / ".local/workspace")))
+    ui_state = UIState(store)
     jobs = Jobs(store, headroom=headroom)
     drive = Drive(store.root)
     drive_backup = DriveBackup(drive, store)
@@ -330,6 +332,23 @@ def create_app(workspace=None, token=None, origin=None, api_host=None, headroom=
         if str(selected).endswith(".amvs"):
             return await asyncio.to_thread(snapshots.import_package, Path(selected))
         return await asyncio.to_thread(store.open_manual, Path(selected))
+
+    @app.get("/api/v1/ui-state")
+    def get_ui_state():
+        return ui_state.status()
+
+    @app.patch("/api/v1/ui-state")
+    async def set_ui_state(request: Request):
+        data = await body(request)
+        if set(data) != {"key", "value"}:
+            raise ValueError("Trường không hợp lệ.")
+        return ui_state.preference(data["key"], data["value"])
+
+    @app.post("/api/v1/projects/{id}/opened")
+    async def project_opened(id: str, request: Request):
+        if await body(request) != {}:
+            raise ValueError("Trường không hợp lệ.")
+        return ui_state.opened(id)
 
     @app.get("/api/v1/projects")
     def list_projects():

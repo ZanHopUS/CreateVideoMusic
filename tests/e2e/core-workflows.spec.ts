@@ -431,8 +431,11 @@ test('second tab is read-only until explicit editor takeover', async ({
   other.on('dialog', (d) => d.accept());
   try {
     await other.goto('/#session=' + token);
+    await other.getByRole('button', { name: 'Dự án', exact: true }).click();
     await other
-      .getByRole('button', { name: 'Project lease fixture', exact: true })
+      .locator('.project-card')
+      .filter({ hasText: 'Project lease fixture' })
+      .getByRole('button', { name: 'Mở dự án', exact: true })
       .click();
     await expect(
       other.getByRole('button', { name: 'Nhận quyền chỉnh sửa', exact: true }),

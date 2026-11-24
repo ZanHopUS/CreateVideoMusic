@@ -36,6 +36,7 @@ export function useStudio() {
     [project, setProject] = useState<ProjectContent | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]),
     [projects, setProjects] = useState<{ id: string; name: string }[]>([]),
+    [recent, setRecent] = useState<{ id: string; openedAt: string }[]>([]),
     [selected, setSelected] = useState('caption');
   const [zoom, setZoom] = useState(1);
   const [panels, setPanels] = useState<Record<string, boolean>>({});
@@ -47,6 +48,9 @@ export function useStudio() {
   const [busy, setBusy] = useState(false),
     [dirty, setDirty] = useState(false),
     [job, setJob] = useState<Job | null>(null),
+    [backgroundJobs, setBackgroundJobs] = useState<
+      (Job & { projectId: string })[]
+    >([]),
     [rights, setRights] = useState(false);
   const latest = useRef<ProjectContent | null>(null),
     serial = useRef<Promise<unknown>>(Promise.resolve());
@@ -159,10 +163,14 @@ export function useStudio() {
     const loadedAssets = await client.call<Asset[]>('assets');
     const loadedProjects =
       await client.call<{ id: string; name: string }[]>('projects');
+    const uiState = await client.call<{
+      recent: { id: string; openedAt: string }[];
+    }>('ui-state');
     if (!mounted.current || api.current !== client) return;
     assetsRef.current = loadedAssets;
     setAssets(loadedAssets);
     setProjects(loadedProjects);
+    setRecent(uiState.recent);
   }, []);
   useEffect(() => {
     const target = pendingSeek.current;
@@ -317,6 +325,28 @@ export function useStudio() {
     return () => clearTimeout(timer);
   }, [project, ready, selected, zoom, panels, writeAllowed]);
   useEffect(() => {
+    if (!ready || !api.current) return;
+    let active = true;
+    const client = api.current;
+    const inspect = () =>
+      client
+        .call<(Job & { projectId: string })[]>('jobs')
+        .then((rows) => {
+          if (active && api.current === client) setBackgroundJobs(rows);
+        })
+        .catch(() => {
+          /* Job status is retried; the main API session reports connection errors. */
+        });
+    void inspect();
+    const timer = window.setInterval(() => {
+      void inspect();
+    }, 3000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [ready]);
+  useEffect(() => {
     if (
       !job ||
       ['succeeded', 'failed', 'cancelled', 'interrupted'].includes(job.status)
@@ -406,6 +436,11 @@ export function useStudio() {
       );
       assertCurrent(epoch);
       adopt(created);
+      await api.current!.json(
+        `projects/${created.project.id}/opened`,
+        'POST',
+        {},
+      );
       await refresh();
     });
   }
@@ -417,6 +452,8 @@ export function useStudio() {
       const opened = await api.current!.call<RecordState>(`projects/${id}`);
       assertCurrent(epoch);
       adopt(opened);
+      await api.current!.json(`projects/${id}/opened`, 'POST', {});
+      await refresh();
     });
   }
   async function choose(scope: 'project' | 'export') {
@@ -601,6 +638,11 @@ export function useStudio() {
       assertCurrent(epoch);
       if (!result.cancelled) {
         adopt(result);
+        await api.current!.json(
+          `projects/${result.project.id}/opened`,
+          'POST',
+          {},
+        );
         await refresh();
       }
     });
@@ -665,11 +707,19 @@ export function useStudio() {
     missingMedia,
     project,
     projects,
+    recent,
     selected,
     setSelected,
     busy,
     dirty,
     job,
+    backgroundJobs,
+    selectBackgroundJob: (id: string) => {
+      const found = backgroundJobs.find(
+        (row) => row.id === id && row.kind === 'render',
+      );
+      if (found) setJob(found);
+    },
     rights,
     setRights,
     player,

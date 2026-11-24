@@ -419,3 +419,5 @@ Commit tài liệu đề xuất khi PO cho phép: `docs(ui): document dashboard 
 **Bàn giao UI-05 ngày24/11/2026:** đã lưu đầy đủ đặc tả PO v1.0 (bổ sung hoàn chỉnh từ hội thoại), 16AC và phân tích capability/flow/rủi ro/Pending Technical Approval trong UI-05. Chỉ tài liệu; chưa triển khai R5, chưa chạy browser/backend tests mới, chưa commit/push/merge. Các thay đổi UI-03/UI-04 có sẵn được giữ nguyên.
 
 **Bàn giao UI-06 ngày24/11/2026:** đặc tả PO v1.0 và 16AC được bảo toàn; phần capability/contract/risks và dependency R1–R6 là kế hoạch tài liệu. Chưa chạy browser/backend tests mới hoặc triển khai R5 Settings; giữ STG-01/02/03 và UI-03 Drive ownership.
+
+**Master v2.1 — PO Approved for implementation:** [UI_MASTER_SPEC](UI_MASTER_SPEC.md) chốt MR-01…04: nav bốn workspace, Dashboard CTA/3 template/recent, một controller sống qua chuyển workspace và đồng bộ quyết định tài liệu/code. Các dependency R1–R6 ở trên tiếp tục áp dụng; trạng thái triển khai/thử nghiệm theo [Progress](UI_IMPLEMENTATION_PROGRESS.md) và [Acceptance Matrix](UI_ACCEPTANCE_MATRIX.md). Hướng UI-01 được duyệt ở mức thiết kế, số đo/wireframe vẫn cần browser validation.
